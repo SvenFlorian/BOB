@@ -201,7 +201,7 @@ BuildOrderSearch::Action StarcraftBuildOrderSearchManager::getAction(MetaType t)
 
 std::vector<MetaType> StarcraftBuildOrderSearchManager::getOpeningBuildOrder()
 {	
-	return getMetaVector(StrategyManager::Instance().getOpeningBook());
+	return getMetaVector(StrategyManager::Instance().getOpening());
 }
 
 MetaType StarcraftBuildOrderSearchManager::getMetaType(BuildOrderSearch::Action a)

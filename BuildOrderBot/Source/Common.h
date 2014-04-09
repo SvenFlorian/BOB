@@ -27,6 +27,7 @@
 #include "Options.h"
 
 typedef std::vector<BWAPI::Unit*> UnitVector;
+const std::string BOB_DATA_FILEPATH = "bwapi-data/BOB/data/";
 
 BWAPI::AIModule * __NewAIModule();
 

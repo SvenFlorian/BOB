@@ -158,7 +158,7 @@ bool Squad::needsToRegroup()
 	}
 
 	// if we are DT rushing and we haven't lost a DT yet, no retreat!
-	if (StrategyManager::Instance().getCurrentStrategy() == StrategyManager::ProtossDarkTemplar &&
+	if ((BWAPI::Broodwar->self()->completedUnitCount(BWAPI::UnitTypes::Protoss_Dark_Templar) > 0) &&
 		(BWAPI::Broodwar->self()->deadUnitCount(BWAPI::UnitTypes::Protoss_Dark_Templar) == 0))
 	{
 		regroupStatus = std::string("\x04 DARK TEMPLAR HOOOOO!");
