@@ -6,6 +6,9 @@ const std::string LOG_FILE = "log.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
 const std::string OPENINGS_SUFFIX = "_strats.txt";
 
+const std::string ATTACK_TIMINGS_FOLDER = BOB_DATA_FILEPATH + "attack/";
+const std::string ATTACK_TIMINGS_SUFFIX = "_timings.txt";
+
 // constructor
 StrategyManager::StrategyManager() 
 	: firstAttackSent(false)
@@ -242,11 +245,14 @@ const int StrategyManager::defendWithWorkers()
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
 	int ourForceSize = (int)freeUnits.size();
+	int frame =	BWAPI::Broodwar->getFrameCount();
 
-	int numUnitsNeededForAttack = 1;
-
-	bool doAttack  = BWAPI::Broodwar->self()->completedUnitCount(BWAPI::UnitTypes::Protoss_Dark_Templar) >= 1
-					|| ourForceSize >= numUnitsNeededForAttack;
+	int desiredAttackTiming = getDesiredAttackTiming();
+	std::map<BWAPI::UnitType, int> desiredTroops = getDesiredTroops();
+	
+	bool timingOK = frame > desiredAttackTiming;
+	bool armyOK = sufficientArmy(desiredTroops, freeUnits);
+	bool doAttack  = timingOK && armyOK;
 
 	if (doAttack)
 	{
@@ -254,6 +260,106 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 	}
 
 	return doAttack || firstAttackSent;
+}
+
+const std::map<BWAPI::UnitType, int> getDesiredTroops()
+{
+	std::map<BWAPI::UnitType, int> troops;
+
+	return troops;
+}
+
+const bool StrategyManager::sufficientArmy(std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const
+{
+	std::map<BWAPI::UnitType, int>::iterator typeIt;
+	std::set<BWAPI::Unit *>::const_iterator unitIt;
+
+	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
+	{
+		for (unitIt = units.begin(); unitIt != units.end(); ++unitIt)
+		{
+			if (typeIt->first == (*unitIt)->getType()) 
+			{
+				typeIt->second -= 1;
+			}
+		}
+
+		if (typeIt->second > 0) { return false; }
+	}
+
+	return true;
+}
+
+const bool StrategyManager::expandProtossZealotRush() const
+{
+	// if there is no place to expand to, we can't expand
+	if (MapTools::Instance().getNextExpansion() == BWAPI::TilePositions::None)
+	{
+		return false;
+	}
+
+	int numNexus =				BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Protoss_Nexus);
+	int numZealots =			BWAPI::Broodwar->self()->completedUnitCount(BWAPI::UnitTypes::Protoss_Zealot);
+	int frame =					BWAPI::Broodwar->getFrameCount();
+
+	// if there are more than 10 idle workers, expand
+	if (WorkerManager::Instance().getNumIdleWorkers() > 10)
+	{
+		return true;
+	}
+
+	// 2nd Nexus Conditions:
+	//		We have 12 or more zealots
+	//		It is past frame 7000
+	if ((numNexus < 2) && (numZealots > 12 || frame > 9000))
+	{
+		return true;
+	}
+
+	// 3nd Nexus Conditions:
+	//		We have 24 or more zealots
+	//		It is past frame 12000
+	if ((numNexus < 3) && (numZealots > 24 || frame > 15000))
+	{
+		return true;
+	}
+
+	if ((numNexus < 4) && (numZealots > 24 || frame > 21000))
+	{
+		return true;
+	}
+
+	if ((numNexus < 5) && (numZealots > 24 || frame > 26000))
+	{
+		return true;
+	}
+
+	if ((numNexus < 6) && (numZealots > 24 || frame > 30000))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+const bool StrategyManager::expandProtossObserver() const
+{
+	// if there is no place to expand to, we can't expand
+	if (MapTools::Instance().getNextExpansion() == BWAPI::TilePositions::None)
+	{
+		return false;
+	}
+	int numNexus =				BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Protoss_Nexus);
+	
+	//we need 3 nexus and only 3 nexus. 
+	if(numNexus < 3)
+	{
+		return true;
+	}
+	else 
+	{
+		return false;
+	}
 }
 
 const MetaPairVector StrategyManager::getBuildOrderGoal()
@@ -292,6 +398,50 @@ void StrategyManager::loadStrategiesFromFile(BWAPI::Race race)
 		BWAPI::Broodwar->printf(
 			"Unable to open file, some things may not be working or the entire program may crash glhf :).");
 	}
+}
+
+void StrategyManager::loadPlannedAttacksFromFile()
+{
+	std::string filename = ATTACK_TIMINGS_FOLDER + selfRace.getName().c_str() + ATTACK_TIMINGS_SUFFIX;
+	std::vector<int> timings;
+	std::vector<StringPair> armies;
+
+	std::ifstream myfile (filename.c_str());
+	std::string timing_line, unit_type_line, num_unit_line;
+	int i = 0;
+	if (myfile.is_open())
+	{
+		while (getline(myfile,timing_line) && getline(myfile,unit_type_line) && getline(myfile,num_unit_line)) 
+		{	
+			timings.push_back(atoi(timing_line.c_str()));
+			armies.push_back(StringPair(unit_type_line, num_unit_line));
+			i++;
+		}
+		myfile.close();
+	}else
+	{
+		BWAPI::Broodwar->printf(
+			"Unable to open file, some things may not be working or the entire program may crash glhf :).");
+	}
+}
+
+std::map<BWAPI::UnitType, int> extractArmyComposition(StringPair pair)
+{
+	std::map<BWAPI::UnitType, int> unitMap;
+	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(pair.first);
+	
+	std::vector<MetaType>::iterator it = units.begin();
+	std::stringstream ss;
+	ss << pair.second;
+
+	int num(0);
+	while (ss >> num && it != units.end())
+	{
+		BWAPI::UnitType unit = it->unitType;
+		unitMap.insert(std::make_pair(unit, num));
+	}
+
+	return unitMap;
 }
 
 void StrategyManager::log(std::string filename, std::string output)

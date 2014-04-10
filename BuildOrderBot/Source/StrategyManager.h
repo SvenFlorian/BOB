@@ -12,6 +12,7 @@
 #include "..\..\StarcraftBuildOrderSearch\Source\starcraftsearch\StarcraftData.hpp"
 
 typedef std::pair<int, int> IntPair;
+typedef std::pair<std::string, std::string> StringPair;
 typedef std::pair<MetaType, UnitCountType> MetaPair;
 typedef std::vector<MetaPair> MetaPairVector;
 
@@ -36,18 +37,30 @@ class StrategyManager
 	bool						firstAttackSent;
 	bool						enemyIsRandom;
 
+	const	bool				sufficientArmy( std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const;
+	const	std::map<BWAPI::UnitType, int> getDesiredTroops();
+	const	int					getDesiredAttackTiming();
+
 	void	addStrategies();
 	void	setStrategy();
 	void	readResults();
 	void	writeResults();
 	void	loadStrategiesFromFile(BWAPI::Race race);
+	void	loadPlannedAttacksFromFile();
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
+	std::map<BWAPI::UnitType, int>	extractArmyComposition(StringPair pair);
 
 	const	int					getScore(BWAPI::Player * player) const;
 	const	double				getUCBValue(const size_t & strategy) const;
 	
 	const	MetaPairVector		getOpeningBook() const;
+
+	// protoss strategy
+	const	bool				expandProtossZealotRush() const;
+	const	bool				expandProtossObserver() const;
+
+	const void loadPlannedAttacks();
 
 public:
 
