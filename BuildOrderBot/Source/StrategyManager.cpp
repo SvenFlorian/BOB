@@ -1,6 +1,8 @@
 #include "Common.h"
 #include "StrategyManager.h"
+#include <boost/lexical_cast.hpp>
 
+const std::string LOG_FILE = "log.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
 const std::string OPENINGS_SUFFIX = "_strats.txt";
 
@@ -76,7 +78,6 @@ void StrategyManager::readResults()
 
 		f_in.close();
 	}
-
 	/*BWAPI::Broodwar->printf("Results (%s): (%d %d) (%d %d) (%d %d)", BWAPI::Broodwar->enemy()->getName().c_str(), 
 		results[0].first, results[0].second, results[1].first, results[1].second, results[2].first, results[2].second);*/
 }
@@ -135,9 +136,10 @@ void StrategyManager::setStrategy()
 	{
 		// otherwise return a random strategy
 		currentStrategy = rand() % usableStrategies.size();
+		StrategyManager::Instance().log(boost::lexical_cast<std::string>(currentStrategy));
+		StrategyManager::Instance().log(openingBook[currentStrategy]);
 		//currentStrategy = usableStrategies[rand() % usableStrategies.size()];
 	}
-
 }
 
 void StrategyManager::onEnd(const bool isWinner)
@@ -187,7 +189,6 @@ const double StrategyManager::getUCBValue(const size_t & strategy) const
 	double trials	= results[strategy].first + results[strategy].second;
 
 	double ucb = (wins / trials) + C * sqrt(std::log(totalTrials) / trials);
-
 	return ucb;
 }
 
@@ -258,7 +259,7 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
 	MetaPairVector goal;
-	goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dark_Templar,	10));
+	goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Probe, 10));
 	return goal;
 }
 
@@ -273,14 +274,14 @@ const int StrategyManager::getCurrentStrategy()
 void StrategyManager::loadStrategiesFromFile(BWAPI::Race race)
 {
 	std::string filename = OPENINGS_FOLDER + race.getName().c_str() + OPENINGS_SUFFIX;
-	std::ifstream myfile ((readDir + filename).c_str());
+	std::ifstream myfile (filename.c_str());
 	std::string line;
 	int i = 0;
 	if (myfile.is_open())
 	{
 		while (getline(myfile,line)) 
 		{	
-			openingBook[i] = line;
+			openingBook.push_back(line);
 			usableStrategies.push_back(i);
 			i++;
 		}
@@ -291,4 +292,17 @@ void StrategyManager::loadStrategiesFromFile(BWAPI::Race race)
 		BWAPI::Broodwar->printf(
 			"Unable to open file, some things may not be working or the entire program may crash glhf :).");
 	}
+}
+
+void StrategyManager::log(std::string filename, std::string output)
+{
+	std::ofstream file;
+	file.open(filename.c_str(), std::ios::app);
+	file << output << "\n";
+	file.close();
+}
+
+void StrategyManager::log(std::string output)
+{
+	log(LOG_FILE, output);
 }
