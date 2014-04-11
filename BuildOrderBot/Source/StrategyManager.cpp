@@ -19,6 +19,8 @@ StrategyManager::StrategyManager()
 {
 	addStrategies();
 	setStrategy();
+
+	loadPlannedAttacksFromFile();
 }
 
 // get an instance of this
@@ -249,7 +251,7 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 	int frame =	BWAPI::Broodwar->getFrameCount();
 
 	int desiredAttackTiming = getDesiredAttackTiming();
-	std::map<BWAPI::UnitType, int> desiredTroops = getDesiredTroops();
+	std::map<BWAPI::UnitType, int> desiredTroops = StrategyManager::extractArmyComposition(armyCompositions.front());
 	
 	bool timingOK = frame > desiredAttackTiming;
 	bool armyOK = sufficientArmy(desiredTroops, freeUnits);
@@ -263,12 +265,6 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 	return doAttack || firstAttackSent;
 }
 
-const std::map<BWAPI::UnitType, int> getDesiredTroops()
-{
-	std::map<BWAPI::UnitType, int> troops;
-
-	return troops;
-}
 
 const bool StrategyManager::sufficientArmy(std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const
 {
@@ -366,10 +362,19 @@ const bool StrategyManager::expandProtossObserver() const
 const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
 	MetaPairVector goal;
-	goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Probe, 10));
+
+	std::map<BWAPI::UnitType, int> desiredArmy = StrategyManager::extractArmyComposition(armyCompositions.front());
+	std::map<BWAPI::UnitType, int>::iterator typeIt;
+	std::set<BWAPI::Unit *>::const_iterator unitIt;
+
+	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
+	{
+		int neededUnits = typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
+		goal.push_back(MetaPair(typeIt->first, neededUnits));
+	}
+
 	return goal;
 }
-
 
 
 const int StrategyManager::getCurrentStrategy()
@@ -404,8 +409,6 @@ void StrategyManager::loadStrategiesFromFile(BWAPI::Race race)
 void StrategyManager::loadPlannedAttacksFromFile()
 {
 	std::string filename = ATTACK_TIMINGS_FOLDER + selfRace.getName().c_str() + ATTACK_TIMINGS_SUFFIX;
-	std::vector<int> timings;
-	std::vector<StringPair> armies;
 
 	std::ifstream myfile (filename.c_str());
 	std::string timing_line, unit_type_line, num_unit_line;
@@ -414,11 +417,13 @@ void StrategyManager::loadPlannedAttacksFromFile()
 	{
 		while (getline(myfile,timing_line) && getline(myfile,unit_type_line) && getline(myfile,num_unit_line)) 
 		{	
-			timings.push_back(atoi(timing_line.c_str()));
-			armies.push_back(StringPair(unit_type_line, num_unit_line));
+			attackTimings.push(atoi(timing_line.c_str()));
+			armyCompositions.push(StringPair(unit_type_line, num_unit_line));
 			i++;
 		}
 		myfile.close();
+
+
 	}else
 	{
 		BWAPI::Broodwar->printf(
@@ -426,7 +431,12 @@ void StrategyManager::loadPlannedAttacksFromFile()
 	}
 }
 
-std::map<BWAPI::UnitType, int> extractArmyComposition(StringPair pair)
+/* Extracts information from two strings. 
+ * StringPair.first - the unit codes
+ * StringPair.second - the amount of troops of each unit type
+ * Eg) "0 24 17", "10 5 1"   means   10 units of unit type 0, 5 of type 24 and 1 of type 17
+ */
+const std::map<BWAPI::UnitType, int> StrategyManager::extractArmyComposition(StringPair pair)
 {
 	std::map<BWAPI::UnitType, int> unitMap;
 	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(pair.first);
@@ -443,6 +453,11 @@ std::map<BWAPI::UnitType, int> extractArmyComposition(StringPair pair)
 	}
 
 	return unitMap;
+}
+
+const int StrategyManager::getDesiredAttackTiming()
+{
+	return attackTimings.front();
 }
 
 void StrategyManager::log(std::string filename, std::string output)

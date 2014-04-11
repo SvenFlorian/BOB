@@ -37,9 +37,11 @@ class StrategyManager
 	bool						firstAttackSent;
 	bool						enemyIsRandom;
 
+	std::queue<int>				attackTimings;
+	std::queue<StringPair>		armyCompositions;
+
 	const	bool				sufficientArmy( std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const;
-	const	std::map<BWAPI::UnitType, int> getDesiredTroops();
-	const	int					getDesiredAttackTiming();
+	
 
 	void	addStrategies();
 	void	setStrategy();
@@ -49,7 +51,7 @@ class StrategyManager
 	void	loadPlannedAttacksFromFile();
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
-	std::map<BWAPI::UnitType, int>	extractArmyComposition(StringPair pair);
+	const	std::map<BWAPI::UnitType, int>	extractArmyComposition(StringPair pair);
 
 	const	int					getScore(BWAPI::Player * player) const;
 	const	double				getUCBValue(const size_t & strategy) const;
@@ -74,6 +76,7 @@ public:
 	const	bool				rushDetected();
 
 	const	int					getCurrentStrategy();
+	const	int					getDesiredAttackTiming();
 
 	const	MetaPairVector		getBuildOrderGoal();
 	const	std::string			getOpening() const;
