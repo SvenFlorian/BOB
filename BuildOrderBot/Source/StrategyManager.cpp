@@ -1,6 +1,7 @@
 #include "Common.h"
 #include "StrategyManager.h"
 #include <boost/lexical_cast.hpp>
+#include <base/StarcraftBuildOrderSearchManager.h>
 
 const std::string LOG_FILE = "log.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";

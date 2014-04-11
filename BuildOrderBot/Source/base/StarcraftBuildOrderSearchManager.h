@@ -39,9 +39,8 @@ class StarcraftBuildOrderSearchManager
 
 	void						loadOpeningBook();
 	std::vector<std::vector<MetaType>> openingBook;
-	std::vector<MetaType>		getMetaVector(std::string buildString);
 	MetaType					getMetaType(BuildOrderSearch::Action a);
-	
+	std::vector<MetaType>		getMetaVector(const BuildOrderSearch::SearchResults & results);
 	StarcraftBuildOrderSearchManager();
 
 public:
@@ -60,5 +59,6 @@ public:
 	
 	std::vector<MetaType>		findBuildOrder(const std::vector< std::pair<MetaType, UnitCountType> > & goalUnits);
 
-	std::vector<MetaType>		getMetaVector(const BuildOrderSearch::SearchResults & results);
+	std::vector<MetaType>		getMetaVector(std::string buildString);
+
 };
