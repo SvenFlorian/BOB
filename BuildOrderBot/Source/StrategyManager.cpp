@@ -2,25 +2,17 @@
 #include "StrategyManager.h"
 #include <boost/lexical_cast.hpp>
 #include <base/StarcraftBuildOrderSearchManager.h>
+#include "StrategyPlanner.h"
 
 const std::string LOG_FILE = "log.txt";
-const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
-const std::string OPENINGS_SUFFIX = "_strats.txt";
-
-const std::string ATTACK_TIMINGS_FOLDER = BOB_DATA_FILEPATH + "attack/";
-const std::string ATTACK_TIMINGS_SUFFIX = "_timings.txt";
 
 // constructor
 StrategyManager::StrategyManager() 
 	: firstAttackSent(false)
-	, currentStrategy(0)
 	, selfRace(BWAPI::Broodwar->self()->getRace())
 	, enemyRace(BWAPI::Broodwar->enemy()->getRace())
 {
-	addStrategies();
-	setStrategy();
-
-	loadPlannedAttacksFromFile();
+	
 }
 
 // get an instance of this
@@ -28,17 +20,6 @@ StrategyManager & StrategyManager::Instance()
 {
 	static StrategyManager instance;
 	return instance;
-}
-
-void StrategyManager::addStrategies() 
-{
-	readDir = OPENINGS_FOLDER;
-	loadStrategiesFromFile(selfRace);
-
-	if (Options::Modules::USING_STRATEGY_IO)
-	{
-		readResults();
-	}
 }
 
 void StrategyManager::readResults()
@@ -75,7 +56,7 @@ void StrategyManager::readResults()
 		std::string line;
 
 		unsigned int strategy = 0;
-		unsigned int numStrategies = usableStrategies.size();
+		unsigned int numStrategies = StrategyPlanner::Instance().getUsableStrategies().size();
 		while (strategy < numStrategies) 
 		{
 			getline(f_in, line);
@@ -94,7 +75,7 @@ void StrategyManager::writeResults()
 	std::ofstream f_out(writeFile.c_str());
 
 	unsigned int strategy = 0;
-	unsigned int numStrategies = usableStrategies.size();
+	unsigned int numStrategies = StrategyPlanner::Instance().getUsableStrategies().size();
 	while (strategy < numStrategies) 
 	{
 		f_out << results[strategy].first   << "\n";
@@ -104,65 +85,22 @@ void StrategyManager::writeResults()
 	f_out.close();
 }
 
-void StrategyManager::setStrategy()
-{
-	// if we are using file io to determine strategy, do so
-	if (Options::Modules::USING_STRATEGY_IO)
-	{
-		double bestUCB = -1;
-		int bestStrategyIndex = 0;
-
-		// UCB requires us to try everything once before using the formula
-		for (size_t strategyIndex(0); strategyIndex<usableStrategies.size(); ++strategyIndex)
-		{
-			int sum = results[usableStrategies[strategyIndex]].first + results[usableStrategies[strategyIndex]].second;
-
-			if (sum == 0)
-			{
-				currentStrategy = usableStrategies[strategyIndex];
-				return;
-			}
-		}
-
-		// if we have tried everything once, set the maximizing ucb value
-		for (size_t strategyIndex(0); strategyIndex<usableStrategies.size(); ++strategyIndex)
-		{
-			double ucb = getUCBValue(usableStrategies[strategyIndex]);
-
-			if (ucb > bestUCB)
-			{
-				bestUCB = ucb;
-				bestStrategyIndex = strategyIndex;
-			}
-		}
-		
-		currentStrategy = usableStrategies[bestStrategyIndex];
-	}
-	else
-	{
-		// otherwise return a random strategy
-		currentStrategy = rand() % usableStrategies.size();
-		StrategyManager::Instance().log(boost::lexical_cast<std::string>(currentStrategy));
-		StrategyManager::Instance().log(openingBook[currentStrategy]);
-		//currentStrategy = usableStrategies[rand() % usableStrategies.size()];
-	}
-}
-
 void StrategyManager::onEnd(const bool isWinner)
 {
 	// write the win/loss data to file if we're using IO
 	if (Options::Modules::USING_STRATEGY_IO)
 	{
 		// if the game ended before the tournament time limit
+		int currentStrategy = StrategyPlanner::Instance().getCurrentStrategy();
 		if (BWAPI::Broodwar->getFrameCount() < Options::Tournament::GAME_END_FRAME)
 		{
 			if (isWinner)
 			{
-				results[getCurrentStrategy()].first = results[getCurrentStrategy()].first + 1;
+				results[currentStrategy].first = results[currentStrategy].first + 1;
 			}
 			else
 			{
-				results[getCurrentStrategy()].second = results[getCurrentStrategy()].second + 1;
+				results[currentStrategy].second = results[currentStrategy].second + 1;
 			}
 		}
 		// otherwise game timed out so use in-game score
@@ -170,11 +108,11 @@ void StrategyManager::onEnd(const bool isWinner)
 		{
 			if (getScore(BWAPI::Broodwar->self()) > getScore(BWAPI::Broodwar->enemy()))
 			{
-				results[getCurrentStrategy()].first = results[getCurrentStrategy()].first + 1;
+				results[currentStrategy].first = results[currentStrategy].first + 1;
 			}
 			else
 			{
-				results[getCurrentStrategy()].second = results[getCurrentStrategy()].second + 1;
+				results[currentStrategy].second = results[currentStrategy].second + 1;
 			}
 		}
 		
@@ -184,6 +122,7 @@ void StrategyManager::onEnd(const bool isWinner)
 
 const double StrategyManager::getUCBValue(const size_t & strategy) const
 {
+	std::vector<int> usableStrategies = StrategyPlanner::Instance().getUsableStrategies();
 	double totalTrials(0);
 	for (size_t s(0); s<usableStrategies.size(); ++s)
 	{
@@ -201,11 +140,6 @@ const double StrategyManager::getUCBValue(const size_t & strategy) const
 const int StrategyManager::getScore(BWAPI::Player * player) const
 {
 	return player->getBuildingScore() + player->getKillScore() + player->getRazingScore() + player->getUnitScore();
-}
-
-const std::string StrategyManager::getOpening() const
-{
-	return openingBook[currentStrategy];
 }
 
 // when do we want to defend with our workers?
@@ -247,14 +181,17 @@ const int StrategyManager::defendWithWorkers()
 // freeUnits are the units available to do this attack
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
-	int ourForceSize = (int)freeUnits.size();
+	//int ourForceSize = (int)freeUnits.size();
+	StrategyManager::Instance().log("doAttack() started");
 	int frame =	BWAPI::Broodwar->getFrameCount();
-
-	int desiredAttackTiming = getDesiredAttackTiming();
-	std::map<BWAPI::UnitType, int> desiredTroops = StrategyManager::extractArmyComposition(armyCompositions.front());
+	StrategyManager::Instance().log("frameCount is " + frame);
+	int desiredAttackTiming = StrategyPlanner::Instance().getDesiredAttackTiming();
+	StrategyManager::Instance().log("desiredAttackTiming is " + desiredAttackTiming);
+	const MetaMap desiredTroops = StrategyPlanner::Instance().getArmyComposition();
+	StrategyManager::Instance().log("desiredTroops is something");
 	
 	bool timingOK = frame > desiredAttackTiming;
-	bool armyOK = sufficientArmy(desiredTroops, freeUnits);
+	bool armyOK = sufficientTroops(desiredTroops, freeUnits);
 	bool doAttack  = timingOK && armyOK;
 
 	if (doAttack)
@@ -262,26 +199,28 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 		firstAttackSent = true;
 	}
 
+	StrategyManager::Instance().log("doAttack() ended");
 	return doAttack || firstAttackSent;
 }
 
 
-const bool StrategyManager::sufficientArmy(std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const
+const bool StrategyManager::sufficientTroops(const MetaMap desiredArmy, const std::set<BWAPI::Unit *> & units) const
 {
-	std::map<BWAPI::UnitType, int>::iterator typeIt;
+	MetaMap::const_iterator typeIt;
 	std::set<BWAPI::Unit *>::const_iterator unitIt;
 
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
+		int soldiers = 0;
 		for (unitIt = units.begin(); unitIt != units.end(); ++unitIt)
 		{
 			if (typeIt->first == (*unitIt)->getType()) 
 			{
-				typeIt->second -= 1;
+				soldiers++;
 			}
 		}
 
-		if (typeIt->second > 0) { return false; }
+		if (typeIt->second > soldiers) { return false; }
 	}
 
 	return true;
@@ -361,104 +300,9 @@ const bool StrategyManager::expandProtossObserver() const
 
 const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
-	MetaPairVector goal;
-
-	std::map<BWAPI::UnitType, int> desiredArmy = StrategyManager::extractArmyComposition(armyCompositions.front());
-	std::map<BWAPI::UnitType, int>::iterator typeIt;
-	std::set<BWAPI::Unit *>::const_iterator unitIt;
-
-	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
-	{
-		int neededUnits = typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
-		goal.push_back(MetaPair(typeIt->first, neededUnits));
-	}
-
-	return goal;
+	return StrategyPlanner::Instance().getBuildOrderGoal();
 }
 
-
-const int StrategyManager::getCurrentStrategy()
-{
-	return currentStrategy;
-}
-
-
-void StrategyManager::loadStrategiesFromFile(BWAPI::Race race)
-{
-	std::string filename = OPENINGS_FOLDER + race.getName().c_str() + OPENINGS_SUFFIX;
-	std::ifstream myfile (filename.c_str());
-	std::string line;
-	int i = 0;
-	if (myfile.is_open())
-	{
-		while (getline(myfile,line)) 
-		{	
-			openingBook.push_back(line);
-			usableStrategies.push_back(i);
-			i++;
-		}
-		myfile.close();
-		results = std::vector<IntPair>(i);
-	}else
-	{
-		BWAPI::Broodwar->printf(
-			"Unable to open file, some things may not be working or the entire program may crash glhf :).");
-	}
-}
-
-void StrategyManager::loadPlannedAttacksFromFile()
-{
-	std::string filename = ATTACK_TIMINGS_FOLDER + selfRace.getName().c_str() + ATTACK_TIMINGS_SUFFIX;
-
-	std::ifstream myfile (filename.c_str());
-	std::string timing_line, unit_type_line, num_unit_line;
-	int i = 0;
-	if (myfile.is_open())
-	{
-		while (getline(myfile,timing_line) && getline(myfile,unit_type_line) && getline(myfile,num_unit_line)) 
-		{	
-			attackTimings.push(atoi(timing_line.c_str()));
-			armyCompositions.push(StringPair(unit_type_line, num_unit_line));
-			i++;
-		}
-		myfile.close();
-
-
-	}else
-	{
-		BWAPI::Broodwar->printf(
-			"Unable to open file, some things may not be working or the entire program may crash glhf :).");
-	}
-}
-
-/* Extracts information from two strings. 
- * StringPair.first - the unit codes
- * StringPair.second - the amount of troops of each unit type
- * Eg) "0 24 17", "10 5 1"   means   10 units of unit type 0, 5 of type 24 and 1 of type 17
- */
-const std::map<BWAPI::UnitType, int> StrategyManager::extractArmyComposition(StringPair pair)
-{
-	std::map<BWAPI::UnitType, int> unitMap;
-	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(pair.first);
-	
-	std::vector<MetaType>::iterator it = units.begin();
-	std::stringstream ss;
-	ss << pair.second;
-
-	int num(0);
-	while (ss >> num && it != units.end())
-	{
-		BWAPI::UnitType unit = it->unitType;
-		unitMap.insert(std::make_pair(unit, num));
-	}
-
-	return unitMap;
-}
-
-const int StrategyManager::getDesiredAttackTiming()
-{
-	return attackTimings.front();
-}
 
 void StrategyManager::log(std::string filename, std::string output)
 {

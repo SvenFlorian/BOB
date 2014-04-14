@@ -1,5 +1,6 @@
 #include "Common.h"
 #include "CombatCommander.h"
+#include "StrategyPlanner.h"
 
 CombatCommander::CombatCommander() 
 	: attacking(false)
@@ -63,6 +64,7 @@ void CombatCommander::assignAttackSquads(std::set<BWAPI::Unit *> & unitsToAssign
 	// if we are attacking, what area are we attacking?
 	if (attackEnemy) 
 	{	
+		unitsToAssign = StrategyPlanner::Instance().getAttackSquad(unitsToAssign); 
 		assignAttackRegion(unitsToAssign);				// attack occupied enemy region
 		assignAttackKnownBuildings(unitsToAssign);		// attack known enemy buildings
 		assignAttackVisibleUnits(unitsToAssign);			// attack visible enemy units

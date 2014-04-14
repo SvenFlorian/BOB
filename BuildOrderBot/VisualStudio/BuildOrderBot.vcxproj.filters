@@ -165,6 +165,9 @@
     <ClCompile Include="..\Source\Visualizer.cpp">
       <Filter>extra</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\StrategyPlanner.cpp">
+      <Filter>game\util\info</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\CombatCommander.h">
@@ -295,6 +298,9 @@
     </ClInclude>
     <ClInclude Include="..\Source\Visualizer.h">
       <Filter>extra</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\StrategyPlanner.h">
+      <Filter>game\util\info</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

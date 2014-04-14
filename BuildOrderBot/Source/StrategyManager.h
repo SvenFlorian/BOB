@@ -15,21 +15,17 @@ typedef std::pair<int, int> IntPair;
 typedef std::pair<std::string, std::string> StringPair;
 typedef std::pair<MetaType, UnitCountType> MetaPair;
 typedef std::vector<MetaPair> MetaPairVector;
+typedef std::map<BWAPI::UnitType, int> MetaMap;
 
 class StrategyManager 
 {
 	StrategyManager();
 	~StrategyManager() {}
 
-	std::vector<std::string>	openingBook;
-
 	std::string					readDir;
 	std::string					writeDir;
 	std::vector<IntPair>		results;
 	std::string					readFile;
-	std::vector<int>			usableStrategies;
-	int							currentStrategy;
-	int							numStrategies;
 
 	BWAPI::Race					selfRace;
 	BWAPI::Race					enemyRace;
@@ -40,18 +36,15 @@ class StrategyManager
 	std::queue<int>				attackTimings;
 	std::queue<StringPair>		armyCompositions;
 
-	const	bool				sufficientArmy( std::map<BWAPI::UnitType, int> desiredArmy, const std::set<BWAPI::Unit *> & units) const;
+	const	bool				sufficientTroops(const MetaMap desiredArmy, const std::set<BWAPI::Unit *> & units) const;
 	
 
-	void	addStrategies();
-	void	setStrategy();
 	void	readResults();
 	void	writeResults();
-	void	loadStrategiesFromFile(BWAPI::Race race);
-	void	loadPlannedAttacksFromFile();
+
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
-	const	std::map<BWAPI::UnitType, int>	extractArmyComposition(StringPair pair);
+
 
 	const	int					getScore(BWAPI::Player * player) const;
 	const	double				getUCBValue(const size_t & strategy) const;
@@ -61,8 +54,6 @@ class StrategyManager
 	// protoss strategy
 	const	bool				expandProtossZealotRush() const;
 	const	bool				expandProtossObserver() const;
-
-	const void loadPlannedAttacks();
 
 public:
 
@@ -74,9 +65,6 @@ public:
 	const	bool				doAttack(const std::set<BWAPI::Unit *> & freeUnits);
 	const	int				    defendWithWorkers();
 	const	bool				rushDetected();
-
-	const	int					getCurrentStrategy();
-	const	int					getDesiredAttackTiming();
 
 	const	MetaPairVector		getBuildOrderGoal();
 	const	std::string			getOpening() const;

@@ -3,7 +3,7 @@
 #include "Common.h"
 #include "BuildOrderQueue.h"
 #include "WorkerManager.h"
-#include "../StrategyManager.h"
+#include "../StrategyPlanner.h"
 #include "..\..\StarcraftBuildOrderSearch\Source\starcraftsearch\ActionSet.hpp"
 #include "..\..\StarcraftBuildOrderSearch\Source\starcraftsearch\DFBBStarcraftSearch.hpp"
 #include "..\..\StarcraftBuildOrderSearch\Source\starcraftsearch\StarcraftState.hpp"
