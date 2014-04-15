@@ -26,7 +26,7 @@ class StrategyPlanner
 	/****************** Variables *************/
 	std::vector<std::string>	openingBook;
 	std::vector<int>			usableStrategies;
-	int							currentStrategy;
+	int							currentStrategyIndex;
 	int							numStrategies;
 
 	BWAPI::Race					selfRace;
@@ -58,7 +58,7 @@ public:
 	static	StrategyPlanner &	Instance();
 
 	const	void				moveToNextAttackGoal();
-	const	int					getCurrentStrategy();
+	const	int					getCurrentStrategyIndex();
 	const	int					getDesiredAttackTiming();
 
 	const	UnitSet				getAttackSquad(const UnitSet freeUnits);

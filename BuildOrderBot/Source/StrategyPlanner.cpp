@@ -11,7 +11,7 @@ const std::string ATTACK_TIMINGS_FOLDER = BOB_DATA_FILEPATH + "attack/";
 const std::string ATTACK_TIMINGS_SUFFIX = "_timings.txt";
 
 StrategyPlanner::StrategyPlanner(void)
-	: currentStrategy(0)
+	: currentStrategyIndex(0)
 	, newAttackGoal(true)
 	, selfRace(BWAPI::Broodwar->self()->getRace())
 	, enemyRace(BWAPI::Broodwar->enemy()->getRace())
@@ -32,9 +32,9 @@ StrategyPlanner & StrategyPlanner::Instance()
 void StrategyPlanner::setStrategy()
 {
 	// return a random strategy
-	currentStrategy = rand() % usableStrategies.size();
-	StrategyPlanner::Instance().log(boost::lexical_cast<std::string>(currentStrategy));
-	StrategyPlanner::Instance().log(openingBook[currentStrategy]);
+	currentStrategyIndex = rand() % usableStrategies.size();
+	StrategyPlanner::Instance().log(boost::lexical_cast<std::string>(currentStrategyIndex));
+	StrategyPlanner::Instance().log(openingBook[currentStrategyIndex]);
 	//currentStrategy = usableStrategies[rand() % usableStrategies.size()];
 }
 
@@ -56,6 +56,12 @@ const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
 
 const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const UnitSet freeUnits)
 {
+	// if the time is not right, then don't add more attacking units
+	if (BWAPI::Broodwar->getFrameCount() < attackTimings.front())
+	{
+		return unitsAllowedToAttack;
+	}
+
 	UnitSet attackSquad;
 
 	MetaMap::const_iterator typeIt;
@@ -73,14 +79,19 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 				soldiers++;
 			}
 		}
+
+		// if not enough troops, only return currently attacking squad
+		if (soldiers < typeIt->second) { return unitsAllowedToAttack; }
 	}
 
-	return unitsAllowedToAttack = attackSquad;
+	unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
+	StrategyPlanner::moveToNextAttackGoal();
+	return unitsAllowedToAttack;
 }
 
 const MetaMap StrategyPlanner::getArmyComposition()
 {
-	return getArmyComposition(armyCompositions.front());
+	return currentWantedArmyComposition = getArmyComposition(armyCompositions.front());
 }
 
 /* Extracts information from two strings. 
@@ -112,15 +123,15 @@ const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 	}
 
 	StrategyPlanner::Instance().log("getArmyComposition(StringPair) ended");
-	return currentWantedArmyComposition = unitMap;
+	return unitMap;
 }
 
 
 /***************** SIMPLE GETTERS ********************/
 
-const int StrategyPlanner::getCurrentStrategy()
+const int StrategyPlanner::getCurrentStrategyIndex()
 {
-	return currentStrategy;
+	return currentStrategyIndex;
 }
 
 const int StrategyPlanner::getDesiredAttackTiming()
@@ -135,7 +146,7 @@ const std::vector<int> StrategyPlanner::getUsableStrategies()
 
 const std::string StrategyPlanner::getOpening() const
 {
-	return openingBook[currentStrategy];
+	return openingBook[currentStrategyIndex];
 }
 
 const MetaPairVector StrategyPlanner::getBuildOrderGoal()
@@ -144,12 +155,15 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition();
 	MetaMap::iterator typeIt;
-	std::set<BWAPI::Unit *>::const_iterator unitIt;
+	UnitSet::const_iterator unitIt;
 
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
 		int neededUnits = typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
-		goal.push_back(MetaPair(typeIt->first, neededUnits));
+		if (neededUnits > 0)
+		{
+			goal.push_back(MetaPair(typeIt->first, neededUnits));
+		}
 	}
 
 	return goal;

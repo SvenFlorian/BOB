@@ -91,7 +91,7 @@ void StrategyManager::onEnd(const bool isWinner)
 	if (Options::Modules::USING_STRATEGY_IO)
 	{
 		// if the game ended before the tournament time limit
-		int currentStrategy = StrategyPlanner::Instance().getCurrentStrategy();
+		int currentStrategy = StrategyPlanner::Instance().getCurrentStrategyIndex();
 		if (BWAPI::Broodwar->getFrameCount() < Options::Tournament::GAME_END_FRAME)
 		{
 			if (isWinner)
