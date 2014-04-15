@@ -32,9 +32,10 @@ class StrategyPlanner
 	BWAPI::Race					selfRace;
 	BWAPI::Race					enemyRace;
 
-	bool						newAttackGoal;
-	std::queue<int>				attackTimings;
-	std::queue<StringPair>		armyCompositions;
+	bool						newAttackOrder;
+	std::vector<int>			attackTimings;
+	std::vector<StringPair>		armyCompositions;
+	int							attackOrderIndex;
 
 	MetaMap						currentWantedArmyComposition;
 
@@ -44,10 +45,11 @@ class StrategyPlanner
 	
 	void	setStrategy();
 	
-	
 	// log stuff
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
+	void	log(std::string filename, int output);
+	void	log(int output);
 
 	// load stuff from files
 	void	loadStrategiesFromFile(BWAPI::Race race);
@@ -69,5 +71,7 @@ public:
 	const	MetaPairVector		getBuildOrderGoal();
 	const	std::string			getOpening() const;
 	const	std::vector<int>	getUsableStrategies();
+
+	const	MetaMap				mergeMetaMaps(MetaMap map1, MetaMap map2);
 };
 

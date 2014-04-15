@@ -44,6 +44,8 @@ class StrategyManager
 
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
+	void	log(std::string filename, int output);
+	void	log(int output);
 
 
 	const	int					getScore(BWAPI::Player * player) const;

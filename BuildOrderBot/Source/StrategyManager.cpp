@@ -4,7 +4,7 @@
 #include <base/StarcraftBuildOrderSearchManager.h>
 #include "StrategyPlanner.h"
 
-const std::string LOG_FILE = "log.txt";
+const std::string LOG_FILE = "bwapi-data/BOB/data/StrategyManagerLog.txt";
 
 // constructor
 StrategyManager::StrategyManager() 
@@ -182,24 +182,21 @@ const int StrategyManager::defendWithWorkers()
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
 	//int ourForceSize = (int)freeUnits.size();
-	StrategyManager::Instance().log("doAttack() started");
 	int frame =	BWAPI::Broodwar->getFrameCount();
-	StrategyManager::Instance().log("frameCount is " + frame);
 	int desiredAttackTiming = StrategyPlanner::Instance().getDesiredAttackTiming();
-	StrategyManager::Instance().log("desiredAttackTiming is " + desiredAttackTiming);
 	const MetaMap desiredTroops = StrategyPlanner::Instance().getArmyComposition();
-	StrategyManager::Instance().log("desiredTroops is something");
-	
+
 	bool timingOK = frame > desiredAttackTiming;
 	bool armyOK = sufficientTroops(desiredTroops, freeUnits);
 	bool doAttack  = timingOK && armyOK;
+
+	//if (timingOK) { StrategyManager::Instance().log(frame);}
 
 	if (doAttack)
 	{
 		firstAttackSent = true;
 	}
 
-	StrategyManager::Instance().log("doAttack() ended");
 	return doAttack || firstAttackSent;
 }
 
@@ -308,11 +305,24 @@ void StrategyManager::log(std::string filename, std::string output)
 {
 	std::ofstream file;
 	file.open(filename.c_str(), std::ios::app);
-	file << output << "\n";
+	file << output.c_str() << "\n";
 	file.close();
 }
 
 void StrategyManager::log(std::string output)
+{
+	log(LOG_FILE, output);
+}
+
+void StrategyManager::log(std::string filename, int output)
+{
+	std::ofstream file;
+	file.open(filename.c_str(), std::ios::app);
+	file << output << "\n";
+	file.close();
+}
+
+void StrategyManager::log(int output)
 {
 	log(LOG_FILE, output);
 }
