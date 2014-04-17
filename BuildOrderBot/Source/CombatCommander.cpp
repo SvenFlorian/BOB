@@ -64,11 +64,12 @@ void CombatCommander::assignAttackSquads(std::set<BWAPI::Unit *> & unitsToAssign
 	// if we are attacking, what area are we attacking?
 	if (attackEnemy) 
 	{	
-		unitsToAssign = StrategyPlanner::Instance().getAttackSquad(unitsToAssign); 
-		assignAttackRegion(unitsToAssign);				// attack occupied enemy region
-		assignAttackKnownBuildings(unitsToAssign);		// attack known enemy buildings
-		assignAttackVisibleUnits(unitsToAssign);			// attack visible enemy units
-		assignAttackExplore(unitsToAssign);				// attack and explore for unknown units
+		UnitSet units = StrategyPlanner::Instance().getAttackSquad(unitsToAssign); 
+		if (units.empty()) { return; }
+		assignAttackRegion(units);				// attack occupied enemy region
+		assignAttackKnownBuildings(units);		// attack known enemy buildings
+		assignAttackVisibleUnits(units);			// attack visible enemy units
+		assignAttackExplore(units);				// attack and explore for unknown units
 	} 
 }
 

@@ -60,7 +60,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 	// if the time is not right, then don't add more attacking units
 	if (BWAPI::Broodwar->getFrameCount() < attackTimings[attackOrderIndex])
 	{
-		return unitsAllowedToAttack; 
+		return unitsAllowedToAttack;  
 	}
 
 	UnitSet attackSquad;
@@ -83,7 +83,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 		}
 
 		// if not enough troops, only return currently attacking squad
-		if (soldiers < typeIt->second) { return unitsAllowedToAttack; }
+		if (soldiers < typeIt->second) { return unitsAllowedToAttack; } 
 	}
 
 	
@@ -159,16 +159,21 @@ const std::string StrategyPlanner::getOpening() const
 
 const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 {
-	StrategyPlanner::Instance().log("StrategyPlanner::getBuildOrderGoal()");
-
 	MetaPairVector goal;
+	if (BWAPI::Broodwar->getFrameCount() < 10000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dragoon, 8)); }
+	else if (BWAPI::Broodwar->getFrameCount() < 15000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dark_Templar, 5)); }
+	else if (BWAPI::Broodwar->getFrameCount() < 20000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Corsair, 5)); }
+	else { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dragoon, 50)); }
+	
+	return goal;
+
+
 	MetaMap desiredArmy;
 	int index = attackOrderIndex;
 
 	//loop over attack orders until we get one where we need more troops to do it
 	while (goal.empty() && (index < armyCompositions.size()))
 	{
-		StrategyPlanner::Instance().log("loop");
 		MetaMap nextOrderArmyComposition = StrategyPlanner::getArmyComposition(armyCompositions[index]);
 		desiredArmy = StrategyPlanner::mergeMetaMaps(desiredArmy, nextOrderArmyComposition);
 		MetaMap::iterator typeIt;
@@ -176,24 +181,28 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 
 		for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 		{
-			StrategyPlanner::Instance().log("iterate"); //IT NEVER GOES HERE!!???? :(
-			int neededUnits = typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
+			int neededUnits = typeIt->second;// - BWAPI::Broodwar->self()->allUnitCount(typeIt->first); DOES NOT WORK YET
 			if (neededUnits > 0)
 			{
 				goal.push_back(MetaPair(typeIt->first, neededUnits));
-				StrategyPlanner::Instance().log(neededUnits);
 			}
 		}
 
 		index++; 
 	}
-	StrategyPlanner::Instance().log("over");
 
 	//if enough troops for all attack orders
 	if (goal.empty())
 	{
 		//improvise?
 	}
+
+	//StrategyPlanner::Instance().log("We need: ");
+	//for (int i = 0; i < goal.size(); ++i)
+	//{
+	//	StrategyPlanner::Instance().log(goal[i].first.getName());
+	//}
+	//StrategyPlanner::Instance().log("");
 
 	return goal;
 }

@@ -42,10 +42,7 @@ class StrategyManager
 	void	readResults();
 	void	writeResults();
 
-	void	log(std::string filename, std::string output);
-	void	log(std::string output);
-	void	log(std::string filename, int output);
-	void	log(int output);
+	
 
 
 	const	int					getScore(BWAPI::Player * player) const;
@@ -59,6 +56,10 @@ class StrategyManager
 
 public:
 
+	void	log(std::string filename, std::string output);
+	void	log(std::string output);
+	void	log(std::string filename, int output);
+	void	log(int output);
 	static	StrategyManager &	Instance();
 
 			void				onEnd(const bool isWinner);
