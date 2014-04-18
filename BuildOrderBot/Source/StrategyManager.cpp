@@ -181,6 +181,8 @@ const int StrategyManager::defendWithWorkers()
 // freeUnits are the units available to do this attack
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
+	//return true; //these things are now caught by the getAttackSquad()-method
+
 	//int ourForceSize = (int)freeUnits.size();
 	int frame =	BWAPI::Broodwar->getFrameCount();
 	int desiredAttackTiming = StrategyPlanner::Instance().getDesiredAttackTiming();

@@ -43,6 +43,10 @@ void StrategyPlanner::setStrategy()
 
 const void StrategyPlanner::moveToNextAttackGoal()
 {
+	if (attackTimings[attackOrderIndex + 1] > BWAPI::Broodwar->getFrameCount())
+	{
+		return;
+	}
 	if (attackOrderIndex < (attackTimings.size() - 1))
 	{
 		attackOrderIndex++;
@@ -55,52 +59,83 @@ const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
 	return getAttackSquad(getArmyComposition(), freeUnits);
 }
 
-const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const UnitSet freeUnits)
+const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, UnitSet freeUnits)
 {
-	// if the time is not right, then don't add more attacking units
-	if (BWAPI::Broodwar->getFrameCount() < attackTimings[attackOrderIndex])
-	{
-		return unitsAllowedToAttack;  
-	}
-
 	UnitSet attackSquad;
-
 	MetaMap::const_iterator typeIt;
 	UnitSet::const_iterator unitIt;
 
-	//to improve efficiency: added soldiers should be removed from the set/iterator set
 	for (typeIt = wantedSquad.begin(); typeIt != wantedSquad.end(); ++typeIt)
 	{
 		int soldiers = 0;
-		for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
+		for (unitIt = unitsAllowedToAttack.begin(); unitIt != unitsAllowedToAttack.end(); ++unitIt)
 		{
-			//TODO check for ID?
 			if (typeIt->first == (*unitIt)->getType()) 
 			{
 				attackSquad.insert((*unitIt));
+				freeUnits.erase(unitIt++);
 				soldiers++;
 			}
 		}
 
-		// if not enough troops, only return currently attacking squad
-		if (soldiers < typeIt->second) { return unitsAllowedToAttack; } 
-	}
-
-	
-	for (unitIt = unitsAllowedToAttack.begin(); unitIt != unitsAllowedToAttack.end(); ++unitIt)
-	{
-		if ( (*unitIt)->getHitPoints() < 1 )
+		if (soldiers >= typeIt->second) { continue; }
+		for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
 		{
-			unitsAllowedToAttack.erase((*unitIt));
+			if (typeIt->first == (*unitIt)->getType()) 
+			{
+				attackSquad.insert((*unitIt));
+				freeUnits.erase(unitIt++);
+				soldiers++;
+			}
 		}
+		// if not enough troops, only return currently attacking squad
+		//if (soldiers < typeIt->second) { freeUnits.insert(attackSquad.begin(), attackSquad.end()); return unitsAllowedToAttack; } 
 	}
 
-	StrategyPlanner::Instance().log("UnitsAllowedToAttack: ");
-	StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
-	unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
-	StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
+
+	// if the time is not right, then don't add more attacking units
+	//if (BWAPI::Broodwar->getFrameCount() < attackTimings[attackOrderIndex])
+	//{
+	//	return unitsAllowedToAttack;  
+	//}
+
+	//to improve efficiency: added soldiers should be removed from the set/iterator set
+	//for (typeIt = wantedSquad.begin(); typeIt != wantedSquad.end(); ++typeIt)
+	//{
+	//	int soldiers = 0;
+	//	for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
+	//	{
+	//		//TODO check for ID?
+	//		if (typeIt->first == (*unitIt)->getType()) 
+	//		{
+	//			attackSquad.insert((*unitIt));
+	//			freeUnits.erase(unitIt++);
+	//			soldiers++;
+	//		}
+	//	}
+
+	//	// if not enough troops, only return currently attacking squad
+	//	//if (soldiers < typeIt->second) { freeUnits.insert(attackSquad.begin(), attackSquad.end()); return unitsAllowedToAttack; } 
+	//}
+
+	unitsAllowedToAttack = attackSquad;
 	StrategyPlanner::moveToNextAttackGoal();
-	return unitsAllowedToAttack;
+	return attackSquad;
+	
+	//for (unitIt = unitsAllowedToAttack.begin(); unitIt != unitsAllowedToAttack.end(); ++unitIt)
+	//{
+	//	if ( (*unitIt)->getHitPoints() < 1 )
+	//	{
+	//		unitsAllowedToAttack.erase((*unitIt));
+	//	}
+	//}
+
+	//StrategyPlanner::Instance().log("UnitsAllowedToAttack: ");
+	//StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
+	//unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
+	//StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
+	//StrategyPlanner::moveToNextAttackGoal();
+	//return unitsAllowedToAttack;
 }
 
 const MetaMap StrategyPlanner::getArmyComposition()

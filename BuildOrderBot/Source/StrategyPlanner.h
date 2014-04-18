@@ -64,7 +64,7 @@ public:
 	const	int					getDesiredAttackTiming();
 
 	const	UnitSet				getAttackSquad(const UnitSet freeUnits);
-	const	UnitSet				getAttackSquad(const MetaMap wantedSquad, const UnitSet freeUnits);
+	const	UnitSet				getAttackSquad(const MetaMap wantedSquad, UnitSet freeUnits);
 	const	MetaMap				getArmyComposition();
 	const	MetaMap				getArmyComposition(StringPair armyComposition);
 
