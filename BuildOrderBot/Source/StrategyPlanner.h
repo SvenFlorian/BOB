@@ -36,10 +36,8 @@ class StrategyPlanner
 	std::vector<int>			attackTimings;
 	std::vector<StringPair>		armyCompositions;
 	int							attackOrderIndex;
-
 	MetaMap						currentWantedArmyComposition;
-
-	UnitSet						unitsAllowedToAttack;
+	UnitSet					attackingSquad;
 
 	/****************** Methods *************/
 	
@@ -63,7 +61,7 @@ public:
 	const	int					getCurrentStrategyIndex();
 	const	int					getDesiredAttackTiming();
 
-	const	UnitSet				getAttackSquad(const UnitSet freeUnits);
+	const	UnitSet				getAttackSquad(UnitSet freeUnits);
 	const	UnitSet				getAttackSquad(const MetaMap wantedSquad, UnitSet freeUnits);
 	const	MetaMap				getArmyComposition();
 	const	MetaMap				getArmyComposition(StringPair armyComposition);

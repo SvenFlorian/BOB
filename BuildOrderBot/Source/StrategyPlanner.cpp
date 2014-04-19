@@ -43,18 +43,14 @@ void StrategyPlanner::setStrategy()
 
 const void StrategyPlanner::moveToNextAttackGoal()
 {
-	if (attackTimings[attackOrderIndex + 1] > BWAPI::Broodwar->getFrameCount())
-	{
-		return;
-	}
-	if (attackOrderIndex < (attackTimings.size() - 1))
+	if ((attackOrderIndex + 1) < attackTimings.size())
 	{
 		attackOrderIndex++;
 		newAttackOrder = true;
 	}
 }
 
-const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
+const UnitSet StrategyPlanner::getAttackSquad(UnitSet freeUnits)
 {
 	return getAttackSquad(getArmyComposition(), freeUnits);
 }
@@ -63,22 +59,11 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, UnitSet
 {
 	UnitSet attackSquad;
 	MetaMap::const_iterator typeIt;
-	UnitSet::const_iterator unitIt;
+	UnitSet::iterator unitIt;
 
 	for (typeIt = wantedSquad.begin(); typeIt != wantedSquad.end(); ++typeIt)
 	{
 		int soldiers = 0;
-		for (unitIt = unitsAllowedToAttack.begin(); unitIt != unitsAllowedToAttack.end(); ++unitIt)
-		{
-			if (typeIt->first == (*unitIt)->getType()) 
-			{
-				attackSquad.insert((*unitIt));
-				freeUnits.erase(unitIt++);
-				soldiers++;
-			}
-		}
-
-		if (soldiers >= typeIt->second) { continue; }
 		for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
 		{
 			if (typeIt->first == (*unitIt)->getType()) 
@@ -88,61 +73,23 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, UnitSet
 				soldiers++;
 			}
 		}
-		// if not enough troops, only return currently attacking squad
-		//if (soldiers < typeIt->second) { freeUnits.insert(attackSquad.begin(), attackSquad.end()); return unitsAllowedToAttack; } 
 	}
 
+	UnitSet::iterator unit;
+	for (unit = attackingSquad.begin(); unit != attackingSquad.end(); ++unit)
+	{
+		if ((*unit)->getHitPoints() < 1) { attackingSquad.erase(unit); }
+	}
 
-	// if the time is not right, then don't add more attacking units
-	//if (BWAPI::Broodwar->getFrameCount() < attackTimings[attackOrderIndex])
-	//{
-	//	return unitsAllowedToAttack;  
-	//}
-
-	//to improve efficiency: added soldiers should be removed from the set/iterator set
-	//for (typeIt = wantedSquad.begin(); typeIt != wantedSquad.end(); ++typeIt)
-	//{
-	//	int soldiers = 0;
-	//	for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
-	//	{
-	//		//TODO check for ID?
-	//		if (typeIt->first == (*unitIt)->getType()) 
-	//		{
-	//			attackSquad.insert((*unitIt));
-	//			freeUnits.erase(unitIt++);
-	//			soldiers++;
-	//		}
-	//	}
-
-	//	// if not enough troops, only return currently attacking squad
-	//	//if (soldiers < typeIt->second) { freeUnits.insert(attackSquad.begin(), attackSquad.end()); return unitsAllowedToAttack; } 
-	//}
-
-	unitsAllowedToAttack = attackSquad;
 	StrategyPlanner::moveToNextAttackGoal();
 	return attackSquad;
-	
-	//for (unitIt = unitsAllowedToAttack.begin(); unitIt != unitsAllowedToAttack.end(); ++unitIt)
-	//{
-	//	if ( (*unitIt)->getHitPoints() < 1 )
-	//	{
-	//		unitsAllowedToAttack.erase((*unitIt));
-	//	}
-	//}
-
-	//StrategyPlanner::Instance().log("UnitsAllowedToAttack: ");
-	//StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
-	//unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
-	//StrategyPlanner::Instance().log(unitsAllowedToAttack.size());
-	//StrategyPlanner::moveToNextAttackGoal();
-	//return unitsAllowedToAttack;
 }
 
 const MetaMap StrategyPlanner::getArmyComposition()
 {
 	if (!newAttackOrder) { return currentWantedArmyComposition; }
 	newAttackOrder = false;
-	return currentWantedArmyComposition = getArmyComposition(armyCompositions[attackOrderIndex]);
+	return (currentWantedArmyComposition = getArmyComposition(armyCompositions[attackOrderIndex]));
 }
 
 /* Extracts information from two strings. 
@@ -195,22 +142,13 @@ const std::string StrategyPlanner::getOpening() const
 const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 {
 	MetaPairVector goal;
-	if (BWAPI::Broodwar->getFrameCount() < 10000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dragoon, 8)); }
-	else if (BWAPI::Broodwar->getFrameCount() < 15000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dark_Templar, 5)); }
-	else if (BWAPI::Broodwar->getFrameCount() < 20000) { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Corsair, 5)); }
-	else { goal.push_back(MetaPair(BWAPI::UnitTypes::Protoss_Dragoon, 50)); }
-	
-	return goal;
-
-
 	MetaMap desiredArmy;
 	int index = attackOrderIndex;
 
 	//loop over attack orders until we get one where we need more troops to do it
 	while (goal.empty() && (index < armyCompositions.size()))
 	{
-		MetaMap nextOrderArmyComposition = StrategyPlanner::getArmyComposition(armyCompositions[index]);
-		desiredArmy = StrategyPlanner::mergeMetaMaps(desiredArmy, nextOrderArmyComposition);
+		desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[index]);
 		MetaMap::iterator typeIt;
 		UnitSet::const_iterator unitIt;
 
@@ -229,15 +167,8 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 	//if enough troops for all attack orders
 	if (goal.empty())
 	{
-		//improvise?
+		//TODO improvise?
 	}
-
-	//StrategyPlanner::Instance().log("We need: ");
-	//for (int i = 0; i < goal.size(); ++i)
-	//{
-	//	StrategyPlanner::Instance().log(goal[i].first.getName());
-	//}
-	//StrategyPlanner::Instance().log("");
 
 	return goal;
 }
@@ -257,29 +188,6 @@ const MetaMap StrategyPlanner::mergeMetaMaps(MetaMap map1, MetaMap map2)
 	{
 		map[it2->first] += it2->second;
 	}
-			
-	//____________________
-
-	/*for (it1 = map1.begin(); it1 != map1.end(); ++it1)
-	{
-		int troops = it1->second;
-		map[it1->first] = it1->second;
-		for (it2 = map2.begin(); it2 != map2.end(); ++it2)
-		{
-			if (it1->first == it2->first)
-			{
-				troops += it2->second;
-			}
-		}
-
-		if (troops > 0)
-		{
-			map.insert(std::make_pair(it1->first, troops));
-			map.
-		}
-	}
-
-	for (*/
 
 	return map;
 }

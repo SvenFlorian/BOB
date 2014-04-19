@@ -181,9 +181,6 @@ const int StrategyManager::defendWithWorkers()
 // freeUnits are the units available to do this attack
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
-	//return true; //these things are now caught by the getAttackSquad()-method
-
-	//int ourForceSize = (int)freeUnits.size();
 	int frame =	BWAPI::Broodwar->getFrameCount();
 	int desiredAttackTiming = StrategyPlanner::Instance().getDesiredAttackTiming();
 	const MetaMap desiredTroops = StrategyPlanner::Instance().getArmyComposition();
@@ -192,7 +189,7 @@ const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 	bool armyOK = sufficientTroops(desiredTroops, freeUnits);
 	bool doAttack  = timingOK && armyOK;
 
-	//if (timingOK) { StrategyManager::Instance().log(frame);}
+	////if (timingOK) { StrategyManager::Instance().log(frame);}
 
 	if (doAttack)
 	{
