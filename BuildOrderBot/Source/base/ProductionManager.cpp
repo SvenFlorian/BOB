@@ -43,6 +43,18 @@ void ProductionManager::performBuildOrderSearch(const std::vector< std::pair<Met
 {	
 	std::vector<MetaType> buildOrder = StarcraftBuildOrderSearchManager::Instance().findBuildOrder(goal);
 
+	std::ofstream file;
+	std::string filename = "bwapi-data/BOB/data/production.txt";
+	file.open(filename.c_str(), std::ios::app);
+	file << "\nperformBuildOrderSearch: \n";
+	for (int i = 0; i < buildOrder.size(); i++)
+	{
+		MetaType type = buildOrder[i];
+		file << type.getName() << ", ";	
+	}
+	file << "\n";
+	file.close();
+
 	// set the build order
 	setBuildOrder(buildOrder);
 }
@@ -77,6 +89,21 @@ void ProductionManager::update()
 	{
 		BWAPI::Broodwar->drawTextScreen(150, 10, "Nothing left to build, new search!");
 		const std::vector< std::pair<MetaType, UnitCountType> > newGoal = StrategyManager::Instance().getBuildOrderGoal();
+		
+		std::ofstream file;
+		std::string filename = "bwapi-data/BOB/data/production.txt";
+		file.open(filename.c_str(), std::ios::app);
+		file << "\nsetBuildOrder: \n";
+		for (int i = 0; i < newGoal.size(); i++)
+		{
+			MetaType type = newGoal[i].first;
+			UnitCountType count = newGoal[i].second;
+			file << type.getName() << ": ";
+			file << (int) count << "\n";
+			
+		}
+		file.close();
+
 		performBuildOrderSearch(newGoal);
 	}
 

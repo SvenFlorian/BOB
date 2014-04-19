@@ -181,25 +181,16 @@ const int StrategyManager::defendWithWorkers()
 // freeUnits are the units available to do this attack
 const bool StrategyManager::doAttack(const std::set<BWAPI::Unit *> & freeUnits)
 {
-	//int ourForceSize = (int)freeUnits.size();
-	StrategyManager::Instance().log("doAttack() started");
 	int frame =	BWAPI::Broodwar->getFrameCount();
-	StrategyManager::Instance().log("frameCount is " + frame);
 	int desiredAttackTiming = StrategyPlanner::Instance().getDesiredAttackTiming();
-	StrategyManager::Instance().log("desiredAttackTiming is " + desiredAttackTiming);
 	const MetaMap desiredTroops = StrategyPlanner::Instance().getArmyComposition();
-	StrategyManager::Instance().log("desiredTroops is something");
 	
 	bool timingOK = frame > desiredAttackTiming;
 	bool armyOK = sufficientTroops(desiredTroops, freeUnits);
 	bool doAttack  = timingOK && armyOK;
 
-	if (doAttack)
-	{
-		firstAttackSent = true;
-	}
+	if (doAttack) { firstAttackSent = true; }
 
-	StrategyManager::Instance().log("doAttack() ended");
 	return doAttack || firstAttackSent;
 }
 
@@ -300,7 +291,20 @@ const bool StrategyManager::expandProtossObserver() const
 
 const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
-	return StrategyPlanner::Instance().getBuildOrderGoal();
+	MetaPairVector temp = StrategyPlanner::Instance().getBuildOrderGoal();
+
+	std::ofstream file;
+	std::string filename = "bwapi-data/BOB/data/production.txt";
+	file << "\nsetBuildOrder: \n";
+	for (int i = 0; i < temp.size(); i++)
+	{
+		file.open(filename.c_str(), std::ios::app);
+		file << "wohoo";
+		file << temp[i].second << "\n";	
+	}
+	file.close();
+
+	return temp;
 }
 
 

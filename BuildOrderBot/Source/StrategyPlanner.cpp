@@ -3,7 +3,7 @@
 #include <boost/lexical_cast.hpp>
 #include <base/StarcraftBuildOrderSearchManager.h>
 
-const std::string LOG_FILE = "log.txt";
+const std::string LOG_FILE = "bwapi-data/BOB/data/log.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
 const std::string OPENINGS_SUFFIX = "_strats.txt";
 
@@ -101,28 +101,23 @@ const MetaMap StrategyPlanner::getArmyComposition()
  */
 const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 {
-	StrategyPlanner::Instance().log("getArmyComposition(StringPair) started");
 	if (!newAttackGoal) { return currentWantedArmyComposition; }
-	StrategyPlanner::Instance().log("No new attack goal.");
 
 	MetaMap unitMap;
 	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(armyComposition.first);
-	StrategyPlanner::Instance().log("We got the MetaVector.");
 
 	std::vector<MetaType>::iterator it = units.begin();
 	std::stringstream ss;
 	ss << armyComposition.second;
-	StrategyPlanner::Instance().log("We did some stuff, now let's start with looping.");
 
 	int num(0);
 	while (ss >> num && it != units.end())
 	{
 		BWAPI::UnitType unit = it->unitType;
 		unitMap.insert(std::make_pair(unit, num));
-		StrategyPlanner::Instance().log("We just inserted something into a map.");
+		it++;
 	}
 
-	StrategyPlanner::Instance().log("getArmyComposition(StringPair) ended");
 	return unitMap;
 }
 
@@ -156,15 +151,29 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition();
 	MetaMap::iterator typeIt;
 	UnitSet::const_iterator unitIt;
-
+	StrategyPlanner::Instance().log("\ngetBuildOrderGoal():");
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
-		int neededUnits = typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
+		int neededUnits = typeIt->second;// - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
 		if (neededUnits > 0)
 		{
 			goal.push_back(MetaPair(typeIt->first, neededUnits));
+			StrategyPlanner::Instance().log(typeIt->first.getName());
+			StrategyPlanner::Instance().log(neededUnits);
 		}
 	}
+
+	std::ofstream file;
+	std::string filename = "bwapi-data/BOB/data/planner.txt";
+	file.open(filename.c_str(), std::ios::app);
+	file << "\nsetBuildOrder: \n";
+	for (int i = 0; i < goal.size(); i++)
+	{
+		
+		file << "planner";
+		file << goal[i].second << "\n";	
+	}
+	file.close();
 
 	return goal;
 }
@@ -181,6 +190,19 @@ void StrategyPlanner::log(std::string filename, std::string output)
 }
 
 void StrategyPlanner::log(std::string output)
+{
+	log(LOG_FILE, output);
+}
+
+void StrategyPlanner::log(std::string filename, int output)
+{
+	std::ofstream file;
+	file.open(filename.c_str(), std::ios::app);
+	file << output << "\n";
+	file.close();
+}
+
+void StrategyPlanner::log(int output)
 {
 	log(LOG_FILE, output);
 }

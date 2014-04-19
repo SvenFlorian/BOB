@@ -44,10 +44,11 @@ class StrategyPlanner
 	
 	void	setStrategy();
 	
-	
 	// log stuff
 	void	log(std::string filename, std::string output);
 	void	log(std::string output);
+	void	log(std::string filename, int output);
+	void	log(int output);
 
 	// load stuff from files
 	void	loadStrategiesFromFile(BWAPI::Race race);
