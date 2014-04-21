@@ -310,6 +310,11 @@ const MetaPairVector StrategyManager::getBuildOrderGoal()
 
 const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 {
+	return getExactBuildOrder(goal, StrategyPlanner::Instance().lastBuildOrderWasForced);
+}
+
+const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal, bool forceBuildOrder)
+{
 	MetaVector buildOrder;
 	MetaPairVector::iterator it;
 
@@ -318,7 +323,7 @@ const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 	{
 		if (it->first.isBuilding())
 		{
-			int unitsNeeded = it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType);
+			int unitsNeeded = (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
 			while (unitsNeeded-- > 0)
 			{
 				buildOrder.push_back(it->first);
@@ -333,7 +338,7 @@ const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 	//next, add units
 	for(it = goal.begin(); it != goal.end(); ++it)
 	{
-		int unitsNeeded = it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType);
+		int unitsNeeded = forceBuildOrder ? it->second : (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
 		while (unitsNeeded-- > 0)
 		{
 			buildOrder.push_back(it->first);

@@ -33,8 +33,8 @@ class StrategyPlanner
 	BWAPI::Race					enemyRace;
 
 	bool						newAttackGoal;
-	std::queue<int>				attackTimings;
-	std::queue<StringPair>		armyCompositions;
+	std::deque<int>				attackTimings;
+	std::deque<StringPair>		armyCompositions;
 
 	MetaMap						currentWantedArmyComposition;
 
@@ -68,9 +68,13 @@ public:
 	const	MetaMap				getArmyComposition(StringPair armyComposition);
 
 	const	MetaPairVector		getBuildOrderGoal();
-	const	MetaPairVector		addRequiredUnits(MetaPairVector goal, MetaPair pair);
+	const	MetaPairVector		getBuildOrderGoal(int attackOrderIndex);
+	const	MetaPairVector		getBuildOrderGoal(int attackOrderIndex, bool forceBuildOrder);
+	const	MetaPairVector		addRequiredUnits(MetaPairVector goal, MetaPair pair, bool forceBuildOrder);
 	const	std::string			getOpening() const;
 	const	std::vector<int>	getUsableStrategies();
 	const	bool				isAttackUnit(BWAPI::UnitType type);
+
+			bool				lastBuildOrderWasForced;
 };
 

@@ -109,10 +109,10 @@ void ProductionManager::update()
 		}
 		file.close();
 
-		std::vector<MetaType> buildOrder = StrategyManager::Instance().getExactBuildOrder(newGoal);
-		setBuildOrder(buildOrder);
+		//std::vector<MetaType> buildOrder = StrategyManager::Instance().getExactBuildOrder(newGoal);
+		//setBuildOrder(buildOrder);
 
-		//performBuildOrderSearch(newGoal);
+		performBuildOrderSearch(newGoal);
 	}
 
 	//// detect if there's a build order deadlock once per second
