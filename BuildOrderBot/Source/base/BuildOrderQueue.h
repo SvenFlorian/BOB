@@ -60,6 +60,7 @@ public:
 	bool hasNextHighestPriorityItem();								// returns the highest priority item
 
 	void drawQueueInformation(int x, int y);
+	const std::vector<MetaType> getQueueAsVector();
 
 	// overload the bracket operator for ease of use
 	BuildOrderItem<PRIORITY_TYPE> operator [] (int i); 

@@ -168,3 +168,16 @@ void BuildOrderQueue::drawQueueInformation(int x, int y) {
 		if (Options::Debug::DRAW_UALBERTABOT_DEBUG) BWAPI::Broodwar->drawTextScreen(x, y+(i*10), "%s%s", prefix.c_str(), queue[queue.size() - 1 - i].metaType.getName().c_str());
 	}
 }
+
+const std::vector<MetaType> BuildOrderQueue::getQueueAsVector()
+{
+	std::vector<MetaType> vector;
+	size_t reps = queue.size() < 10 ? queue.size() : 10;
+
+	// for each unit in the queue
+	for (size_t i(0); i<reps; i++) {
+		vector.push_back(queue[queue.size() - 1 - i].metaType);
+	}
+
+	return vector;
+}

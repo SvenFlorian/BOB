@@ -2,8 +2,10 @@
 #include "StrategyPlanner.h"
 #include <boost/lexical_cast.hpp>
 #include <base/StarcraftBuildOrderSearchManager.h>
+#include <algorithm>
+#include <base/ProductionManager.h>
 
-const std::string LOG_FILE = "bwapi-data/BOB/data/log.txt";
+const std::string LOG_FILE = "bwapi-data/BOB/data/planner.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
 const std::string OPENINGS_SUFFIX = "_strats.txt";
 
@@ -41,12 +43,15 @@ void StrategyPlanner::setStrategy()
 
 const void StrategyPlanner::moveToNextAttackGoal()
 {
+	StrategyPlanner::Instance().log("moveToNextAttackGoal(): ");
+	StrategyPlanner::Instance().log(attackTimings.size());
 	if (attackTimings.size() > 1)
 	{
 		attackTimings.pop();
 		armyCompositions.pop();
-		newAttackGoal = true;
+		StrategyPlanner::Instance().log(attackTimings.size());
 	}
+	newAttackGoal = true;
 }
 
 const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
@@ -70,6 +75,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 	//to improve efficiency: added soldiers should be removed from the set/iterator set
 	for (typeIt = wantedSquad.begin(); typeIt != wantedSquad.end(); ++typeIt)
 	{
+		if (!isAttackUnit(typeIt->first)) { continue; }
 		int soldiers = 0;
 		for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
 		{
@@ -83,6 +89,20 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 		// if not enough troops, only return currently attacking squad
 		if (soldiers < typeIt->second) { return unitsAllowedToAttack; }
 	}
+
+	UnitSet::iterator setIt;
+	for (setIt = unitsAllowedToAttack.begin(); setIt != unitsAllowedToAttack.end(); )
+	{
+		if ((*setIt)->getHitPoints() < 1)
+		{
+			unitsAllowedToAttack.erase(setIt);
+		} 
+		else
+		{
+			setIt++;
+		}
+	}
+	
 
 	unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
 	StrategyPlanner::moveToNextAttackGoal();
@@ -121,6 +141,11 @@ const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 	return unitMap;
 }
 
+const bool StrategyPlanner::isAttackUnit(BWAPI::UnitType type)
+{
+	return !(type.isBuilding() || type.isAddon() || type.isSpell() || type.isWorker());
+}
+
 
 /***************** SIMPLE GETTERS ********************/
 
@@ -151,30 +176,96 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition();
 	MetaMap::iterator typeIt;
 	UnitSet::const_iterator unitIt;
-	StrategyPlanner::Instance().log("\ngetBuildOrderGoal():");
+
+	int supplyNeeded = 0;
+	int supplySpace = BWAPI::Broodwar->self()->supplyTotal() - BWAPI::Broodwar->self()->supplyUsed();
+	int supplyBuildingsNeeded = 0;
+	BWAPI::UnitType supplyBuilding = BWAPI::Broodwar->self()->getRace().getSupplyProvider();
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
-		int neededUnits = typeIt->second;// - BWAPI::Broodwar->self()->allUnitCount(typeIt->first);
-		if (neededUnits > 0)
+		goal = addRequiredUnits(goal, (*typeIt));
+		int neededUnits = typeIt->second;
+
+		//StrategyPlanner::Instance().log(typeIt->first.getName());
+		//StrategyPlanner::Instance().log(neededUnits);
+					
+		supplyNeeded += typeIt->first.supplyRequired() * (neededUnits - BWAPI::Broodwar->self()->allUnitCount(typeIt->first));
+		supplySpace -= supplyNeeded;
+		
+		while (supplySpace < 0)
 		{
-			goal.push_back(MetaPair(typeIt->first, neededUnits));
-			StrategyPlanner::Instance().log(typeIt->first.getName());
-			StrategyPlanner::Instance().log(neededUnits);
+			supplyBuildingsNeeded++;
+			supplySpace += supplyBuilding.supplyProvided();
 		}
 	}
 
-	std::ofstream file;
-	std::string filename = "bwapi-data/BOB/data/planner.txt";
-	file.open(filename.c_str(), std::ios::app);
-	file << "\nsetBuildOrder: \n";
-	for (int i = 0; i < goal.size(); i++)
-	{
-		
-		file << "planner";
-		file << goal[i].second << "\n";	
-	}
-	file.close();
+	if (supplyBuildingsNeeded > 0) { goal.push_back(MetaPair(supplyBuilding, supplyBuildingsNeeded)); }
 
+	//std::ofstream file;
+	//std::string filename = "bwapi-data/BOB/data/planner.txt";
+	//file.open(filename.c_str(), std::ios::app);
+	//file << "\nsetBuildOrder: \n";
+	//for (int i = 0; i < goal.size(); i++)
+	//{
+	//	
+	//	file << "planner";
+	//	file << goal[i].second << "\n";	
+	//}
+	//file.close();
+
+	if (goal.empty()) 
+	{ 
+		moveToNextAttackGoal();
+		return getBuildOrderGoal();
+	}
+
+	return goal;
+}
+
+//const get
+
+const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, MetaPair pair)
+{
+	if (BWAPI::Broodwar->self()->allUnitCount(pair.first.unitType) >= pair.second) { return goal; }
+	
+	//don't add the same unit/building twice
+	MetaPairVector::iterator iterator;
+	for (iterator = goal.begin(); iterator != goal.end(); ++iterator) { if (iterator->first.getName() == pair.first.getName()) { return goal; } }
+	
+	BWAPI::UnitType type = pair.first.unitType;
+	MetaMap requirements = type.requiredUnits();
+
+	// add any required units first
+	if (!requirements.empty())
+	{
+		MetaMap::iterator it;
+		for (it = requirements.begin(); it != requirements.end(); ++it)
+		{
+			goal = addRequiredUnits(goal, (*it));
+		}
+	}
+
+	// and lastly add the unit itself
+	int availableUnits = BWAPI::Broodwar->self()->allUnitCount(pair.first.unitType);
+	UnitSet::iterator it;
+	for (it = unitsAllowedToAttack.begin(); it != unitsAllowedToAttack.end(); ++it)
+	{
+		if ((*it)->getType() == pair.first.unitType)
+		{
+			availableUnits--;
+		}
+	}
+	std::vector<MetaType> buildQueue = ProductionManager::Instance().getQueueAsVector();
+	std::vector<MetaType>::const_iterator queueIt;
+	for (queueIt = buildQueue.begin(); queueIt != buildQueue.end(); ++queueIt)
+	{
+		if (queueIt->unitType == pair.first.unitType)
+		{
+			availableUnits++;
+		}
+	}
+
+	if (pair.second > availableUnits) { goal.push_back(pair); }
 	return goal;
 }
 

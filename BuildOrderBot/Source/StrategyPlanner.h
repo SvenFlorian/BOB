@@ -68,7 +68,9 @@ public:
 	const	MetaMap				getArmyComposition(StringPair armyComposition);
 
 	const	MetaPairVector		getBuildOrderGoal();
+	const	MetaPairVector		addRequiredUnits(MetaPairVector goal, MetaPair pair);
 	const	std::string			getOpening() const;
 	const	std::vector<int>	getUsableStrategies();
+	const	bool				isAttackUnit(BWAPI::UnitType type);
 };
 

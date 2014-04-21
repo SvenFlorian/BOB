@@ -4,7 +4,7 @@
 #include <base/StarcraftBuildOrderSearchManager.h>
 #include "StrategyPlanner.h"
 
-const std::string LOG_FILE = "log.txt";
+const std::string LOG_FILE = "bwapi-data/BOB/data/manager.txt";
 
 // constructor
 StrategyManager::StrategyManager() 
@@ -202,6 +202,7 @@ const bool StrategyManager::sufficientTroops(const MetaMap desiredArmy, const st
 
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
+		if (!StrategyPlanner::Instance().isAttackUnit(typeIt->first)) { continue; }
 		int soldiers = 0;
 		for (unitIt = units.begin(); unitIt != units.end(); ++unitIt)
 		{
@@ -293,18 +294,53 @@ const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
 	MetaPairVector temp = StrategyPlanner::Instance().getBuildOrderGoal();
 
-	std::ofstream file;
-	std::string filename = "bwapi-data/BOB/data/production.txt";
-	file << "\nsetBuildOrder: \n";
-	for (int i = 0; i < temp.size(); i++)
-	{
-		file.open(filename.c_str(), std::ios::app);
-		file << "wohoo";
-		file << temp[i].second << "\n";	
-	}
-	file.close();
+	//std::ofstream file;
+	//std::string filename = "bwapi-data/BOB/data/production.txt";
+	//file.open(filename.c_str(), std::ios::app);
+	//file << "\nsetBuildOrder: \n";
+	//for (int i = 0; i < temp.size(); i++)
+	//{
+	//	file << "wohoo";
+	//	file << temp[i].second << "\n";	
+	//}
+	//file.close();
 
 	return temp;
+}
+
+const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
+{
+	MetaVector buildOrder;
+	MetaPairVector::iterator it;
+
+	//put buildings first
+	for(it = goal.begin(); it != goal.end(); )
+	{
+		if (it->first.isBuilding())
+		{
+			int unitsNeeded = it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType);
+			while (unitsNeeded-- > 0)
+			{
+				buildOrder.push_back(it->first);
+			}
+			it = goal.erase(it);
+		} else
+		{
+			it++;
+		}
+	}
+
+	//next, add units
+	for(it = goal.begin(); it != goal.end(); ++it)
+	{
+		int unitsNeeded = it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType);
+		while (unitsNeeded-- > 0)
+		{
+			buildOrder.push_back(it->first);
+		}
+	}
+
+	return buildOrder;
 }
 
 

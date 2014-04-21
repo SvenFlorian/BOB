@@ -39,6 +39,11 @@ void ProductionManager::setBuildOrder(const std::vector<MetaType> & buildOrder)
 	}
 }
 
+MetaVector ProductionManager::getQueueAsVector()
+{
+	return queue.getQueueAsVector();
+}
+
 void ProductionManager::performBuildOrderSearch(const std::vector< std::pair<MetaType, UnitCountType> > & goal)
 {	
 	std::vector<MetaType> buildOrder = StarcraftBuildOrderSearchManager::Instance().findBuildOrder(goal);
@@ -104,7 +109,10 @@ void ProductionManager::update()
 		}
 		file.close();
 
-		performBuildOrderSearch(newGoal);
+		std::vector<MetaType> buildOrder = StrategyManager::Instance().getExactBuildOrder(newGoal);
+		setBuildOrder(buildOrder);
+
+		//performBuildOrderSearch(newGoal);
 	}
 
 	//// detect if there's a build order deadlock once per second

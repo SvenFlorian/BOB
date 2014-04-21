@@ -16,6 +16,7 @@ typedef std::pair<std::string, std::string> StringPair;
 typedef std::pair<MetaType, UnitCountType> MetaPair;
 typedef std::vector<MetaPair> MetaPairVector;
 typedef std::map<BWAPI::UnitType, int> MetaMap;
+typedef std::vector<MetaType> MetaVector;
 
 class StrategyManager 
 {
@@ -67,5 +68,6 @@ public:
 	const	bool				rushDetected();
 
 	const	MetaPairVector		getBuildOrderGoal();
+	const	MetaVector			getExactBuildOrder(MetaPairVector goal);
 	const	std::string			getOpening() const;
 };

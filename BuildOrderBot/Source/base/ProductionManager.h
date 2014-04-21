@@ -69,6 +69,7 @@ public:
 	static ProductionManager &	Instance();
 
 	void						drawQueueInformation(std::map<BWAPI::UnitType, int> & numUnits, int x, int y, int index);
+	MetaVector					getQueueAsVector();
 	void						update();
 
 	void						onGameEnd();
