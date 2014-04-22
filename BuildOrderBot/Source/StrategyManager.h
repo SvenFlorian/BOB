@@ -68,7 +68,7 @@ public:
 	const	bool				rushDetected();
 
 	const	MetaPairVector		getBuildOrderGoal();
-	const	MetaVector			getExactBuildOrder(MetaPairVector goal);
-	const	MetaVector			getExactBuildOrder(MetaPairVector goal, bool forceBuildOrder);
+	//const	MetaVector			getExactBuildOrder(MetaPairVector goal);
+	//const	MetaVector			getExactBuildOrder(MetaPairVector goal, bool forceBuildOrder);
 	const	std::string			getOpening() const;
 };

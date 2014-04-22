@@ -15,7 +15,6 @@ const std::string ATTACK_TIMINGS_SUFFIX = "_timings.txt";
 StrategyPlanner::StrategyPlanner(void)
 	: currentStrategyIndex(0)
 	, newAttackGoal(true)
-	, lastBuildOrderWasForced(false)
 	, selfRace(BWAPI::Broodwar->self()->getRace())
 	, enemyRace(BWAPI::Broodwar->enemy()->getRace())
 {
@@ -178,11 +177,7 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 
 const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex)
 {
-	return getBuildOrderGoal(attackOrderIndex, false);
-}
-
-const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex, bool forceBuildOrder)
-{
+	StrategyPlanner::Instance().log("getBuildOrderGoal()");
 	MetaPairVector goal;
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
@@ -193,15 +188,13 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex, bo
 	int supplySpace = BWAPI::Broodwar->self()->supplyTotal() - BWAPI::Broodwar->self()->supplyUsed();
 	int supplyBuildingsNeeded = 0;
 	BWAPI::UnitType supplyBuilding = BWAPI::Broodwar->self()->getRace().getSupplyProvider();
+	
 	for (typeIt = desiredArmy.begin(); typeIt != desiredArmy.end(); ++typeIt)
 	{
-		goal = addRequiredUnits(goal, (*typeIt), false);
-		int neededUnits = forceBuildOrder ? typeIt->second : (typeIt->second - BWAPI::Broodwar->self()->allUnitCount(typeIt->first));
-
-		//StrategyPlanner::Instance().log(typeIt->first.getName());
-		//StrategyPlanner::Instance().log(neededUnits);
-					
-		supplyNeeded += typeIt->first.supplyRequired() * neededUnits; 
+		int unitsNeeded = unitsToBeBuiltForAttackOrder(typeIt->first, attackOrderIndex);
+		MetaPair unit = MetaPair(typeIt->first, unitsNeeded);
+		goal = addRequiredUnits(goal, unit, attackOrderIndex);
+		supplyNeeded += unit.first.supplyRequired() * unit.second; 
 	}
 
 	supplySpace -= supplyNeeded;
@@ -211,74 +204,103 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex, bo
 		supplySpace += supplyBuilding.supplyProvided();
 	}
 
-	if (supplyBuildingsNeeded > 0) { goal.push_back(MetaPair(supplyBuilding, supplyBuildingsNeeded)); }
+	if (supplyBuildingsNeeded > 0) 
+	{ 
+		goal.push_back(MetaPair(supplyBuilding, supplyBuildingsNeeded)); 
+	}
 
 	if (goal.empty()) 
 	{ 
-		if (attackOrderIndex + 1 == armyCompositions.size())
+		if (attackOrderIndex + 1 < armyCompositions.size())
 		{
-			return getBuildOrderGoal(attackOrderIndex, true);
-		} 
-		else
-		{
-			return getBuildOrderGoal(attackOrderIndex + 1, true);
+			StrategyPlanner::Instance().log("    getBuildOrderGoal()0");
+			return getBuildOrderGoal(attackOrderIndex + 1);
 		}
 	}
 
-	lastBuildOrderWasForced = (attackOrderIndex != 0) || (armyCompositions.size() == 1);
+	StrategyPlanner::Instance().log("    getBuildOrderGoal()1");
 	return goal;
 }
 
-//const get
-
-const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, MetaPair pair, bool forceBuildOrder)
+/* Returns the # of the given type that are currently attacking. */
+const int StrategyPlanner::attackingUnitCount(BWAPI::UnitType type)
 {
-	if (BWAPI::Broodwar->self()->allUnitCount(pair.first.unitType) >= pair.second) { return goal; }
+	StrategyPlanner::Instance().log("attackingUnitCount()");
+	int count = 0;
+	UnitSet::iterator it;
+	for (it = unitsAllowedToAttack.begin(); it != unitsAllowedToAttack.end(); )
+	{
+		if ((*it)->getHitPoints() < 1)
+		{
+			it = unitsAllowedToAttack.erase(it);
+		} 
+		else 
+		{
+			if ((*it)->getType() == type)
+			{
+				count++;
+			}
+			it++;
+		}
+	}
+	StrategyPlanner::Instance().log("    attackingUnitCount()");
+	return count;
+}
+
+/* Returns the # of the given type that are needed in order to fullfill all upcoming attack orders. */
+const int StrategyPlanner::unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, int attackOrderIndex)
+{
+	StrategyPlanner::Instance().log("unitsToBeBuiltForAttackOrder()");
+	if (attackOrderIndex == -1) { StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder0()"); return 0; }
+
+	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
+	MetaMap::iterator it;
+	for (it = desiredArmy.begin(); it !=  desiredArmy.end(); it++)
+	{
+		if (it->first == type)
+		{
+			StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder1()");
+			return it->second + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
+		}
+	}
+
+	StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder2()");
+	return 0 + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
+}
+
+const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, MetaPair pair, int attackOrderIndex)
+{
+	StrategyPlanner::Instance().log("addRequiredUnits()");
+	// if already sufficient troops, then return immediately
+	BWAPI::UnitType type = pair.first.unitType;
+	int availableUnits = BWAPI::Broodwar->self()->allUnitCount(type) - attackingUnitCount(type);
+	if (availableUnits >= pair.second) { StrategyPlanner::Instance().log("    addRequiredUnits0()"); return goal; }
 	
 	//don't add the same unit/building twice
 	MetaPairVector::iterator iterator;
-	for (iterator = goal.begin(); iterator != goal.end(); ++iterator) { if (iterator->first.getName() == pair.first.getName()) { return goal; } }
+	for (iterator = goal.begin(); iterator != goal.end(); ++iterator) 
+	{ 
+		if (iterator->first.getName() == pair.first.getName()) 
+		{ 
+			StrategyPlanner::Instance().log("    addRequiredUnits1()");
+			return goal; 
+		} 
+	}
 	
-	BWAPI::UnitType type = pair.first.unitType;
-	MetaMap requirements = type.requiredUnits();
-
 	// add any required units first
+	MetaMap requirements = type.requiredUnits();
 	if (!requirements.empty())
 	{
 		MetaMap::iterator it;
 		for (it = requirements.begin(); it != requirements.end(); ++it)
 		{
-			goal = addRequiredUnits(goal, (*it), false); //no need to force required units if they are present
+			goal = addRequiredUnits(goal, (*it), attackOrderIndex); 
 		}
 	}
 
 	// and lastly add the unit itself
-	if (forceBuildOrder)
-	{
-		goal.push_back(pair);
-		return goal;
-	}
-
-	int availableUnits = BWAPI::Broodwar->self()->allUnitCount(pair.first.unitType);
-	UnitSet::iterator it;
-	for (it = unitsAllowedToAttack.begin(); it != unitsAllowedToAttack.end(); ++it)
-	{
-		if ((*it)->getType() == pair.first.unitType)
-		{
-			availableUnits--;
-		}
-	}
-	std::vector<MetaType> buildQueue = ProductionManager::Instance().getQueueAsVector();
-	std::vector<MetaType>::const_iterator queueIt;
-	for (queueIt = buildQueue.begin(); queueIt != buildQueue.end(); ++queueIt)
-	{
-		if (queueIt->unitType == pair.first.unitType)
-		{
-			availableUnits++;
-		}
-	}
-
-	if (pair.second > availableUnits) { goal.push_back(pair); }
+	goal.push_back(pair);
+	StrategyPlanner::Instance().log("    addRequiredUnits2()");
 	return goal;
 }
 

@@ -292,61 +292,48 @@ const bool StrategyManager::expandProtossObserver() const
 
 const MetaPairVector StrategyManager::getBuildOrderGoal()
 {
-	MetaPairVector temp = StrategyPlanner::Instance().getBuildOrderGoal();
-
-	//std::ofstream file;
-	//std::string filename = "bwapi-data/BOB/data/production.txt";
-	//file.open(filename.c_str(), std::ios::app);
-	//file << "\nsetBuildOrder: \n";
-	//for (int i = 0; i < temp.size(); i++)
-	//{
-	//	file << "wohoo";
-	//	file << temp[i].second << "\n";	
-	//}
-	//file.close();
-
-	return temp;
+	return StrategyPlanner::Instance().getBuildOrderGoal();
 }
 
-const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
-{
-	return getExactBuildOrder(goal, StrategyPlanner::Instance().lastBuildOrderWasForced);
-}
-
-const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal, bool forceBuildOrder)
-{
-	MetaVector buildOrder;
-	MetaPairVector::iterator it;
-
-	//put buildings first
-	for(it = goal.begin(); it != goal.end(); )
-	{
-		if (it->first.isBuilding())
-		{
-			int unitsNeeded = (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
-			while (unitsNeeded-- > 0)
-			{
-				buildOrder.push_back(it->first);
-			}
-			it = goal.erase(it);
-		} else
-		{
-			it++;
-		}
-	}
-
-	//next, add units
-	for(it = goal.begin(); it != goal.end(); ++it)
-	{
-		int unitsNeeded = forceBuildOrder ? it->second : (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
-		while (unitsNeeded-- > 0)
-		{
-			buildOrder.push_back(it->first);
-		}
-	}
-
-	return buildOrder;
-}
+//const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
+//{
+//	return getExactBuildOrder(goal, StrategyPlanner::Instance().lastBuildOrderWasForced);
+//}
+//
+//const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal, bool forceBuildOrder)
+//{
+//	MetaVector buildOrder;
+//	MetaPairVector::iterator it;
+//
+//	//put buildings first
+//	for(it = goal.begin(); it != goal.end(); )
+//	{
+//		if (it->first.isBuilding())
+//		{
+//			int unitsNeeded = (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
+//			while (unitsNeeded-- > 0)
+//			{
+//				buildOrder.push_back(it->first);
+//			}
+//			it = goal.erase(it);
+//		} else
+//		{
+//			it++;
+//		}
+//	}
+//
+//	//next, add units
+//	for(it = goal.begin(); it != goal.end(); ++it)
+//	{
+//		int unitsNeeded = forceBuildOrder ? it->second : (it->second - BWAPI::Broodwar->self()->allUnitCount(it->first.unitType));
+//		while (unitsNeeded-- > 0)
+//		{
+//			buildOrder.push_back(it->first);
+//		}
+//	}
+//
+//	return buildOrder;
+//}
 
 
 void StrategyManager::log(std::string filename, std::string output)

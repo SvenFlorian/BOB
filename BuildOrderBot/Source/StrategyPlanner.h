@@ -69,12 +69,12 @@ public:
 
 	const	MetaPairVector		getBuildOrderGoal();
 	const	MetaPairVector		getBuildOrderGoal(int attackOrderIndex);
-	const	MetaPairVector		getBuildOrderGoal(int attackOrderIndex, bool forceBuildOrder);
-	const	MetaPairVector		addRequiredUnits(MetaPairVector goal, MetaPair pair, bool forceBuildOrder);
+	const	MetaPairVector		addRequiredUnits(MetaPairVector goal, MetaPair pair, int attackOrderIndex);
 	const	std::string			getOpening() const;
 	const	std::vector<int>	getUsableStrategies();
+	
 	const	bool				isAttackUnit(BWAPI::UnitType type);
-
-			bool				lastBuildOrderWasForced;
+	const	int					attackingUnitCount(BWAPI::UnitType type);
+	const	int					unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, int attackOrderIndex);
 };
 
