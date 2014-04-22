@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <base/ProductionManager.h>
 
+const std::string COMMON_LOG = "bwapi-data/BOB/data/shared.txt";
 const std::string LOG_FILE = "bwapi-data/BOB/data/planner.txt";
 const std::string OPENINGS_FOLDER = BOB_DATA_FILEPATH + "openings/";
 const std::string OPENINGS_SUFFIX = "_strats.txt";
@@ -43,6 +44,24 @@ void StrategyPlanner::setStrategy()
 
 const void StrategyPlanner::moveToNextAttackGoal()
 {
+	StrategyPlanner::Instance().log(COMMON_LOG, "moveToNextAttackGoal()");
+	StrategyPlanner::Instance().log("All Attack Goals: ");
+	for (int i = 0; i < attackTimings.size(); i++)
+	{
+		StrategyPlanner::Instance().log(attackTimings[i]);
+		MetaMap map = getArmyComposition(armyCompositions[i]);
+		MetaMap::iterator it;
+		for (it = map.begin(); it != map.end(); ++it)
+		{
+			BWAPI::UnitType type = it->first;
+			int count = it->second;
+			StrategyPlanner::Instance().log(type.getName());
+			StrategyPlanner::Instance().log(count);
+		}
+		StrategyPlanner::Instance().log("");
+	}
+	StrategyPlanner::Instance().log("");
+
 	StrategyPlanner::Instance().log("moveToNextAttackGoal(): ");
 	StrategyPlanner::Instance().log(attackTimings.size());
 	if (attackTimings.size() > 1)
@@ -52,7 +71,8 @@ const void StrategyPlanner::moveToNextAttackGoal()
 		StrategyPlanner::Instance().log(attackTimings.size());
 		newAttackGoal = true;
 	}
-	
+
+	StrategyPlanner::Instance().log("");
 }
 
 const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
@@ -62,6 +82,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
 
 const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const UnitSet freeUnits)
 {
+	StrategyPlanner::Instance().log(COMMON_LOG, "getAttackSquad()");
 	// if the time is not right, then don't add more attacking units
 	if (BWAPI::Broodwar->getFrameCount() < attackTimings.front())
 	{
@@ -122,6 +143,7 @@ const MetaMap StrategyPlanner::getArmyComposition()
  */
 const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 {
+	StrategyPlanner::Instance().log(COMMON_LOG, "getArmyComposition()");
 	if (!newAttackGoal) { return currentWantedArmyComposition; }
 
 	MetaMap unitMap;
@@ -177,7 +199,7 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 
 const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex)
 {
-	StrategyPlanner::Instance().log("getBuildOrderGoal()");
+	StrategyPlanner::Instance().log(COMMON_LOG, "getBuildOrderGoal()");
 	MetaPairVector goal;
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
@@ -194,7 +216,7 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex)
 		int unitsNeeded = unitsToBeBuiltForAttackOrder(typeIt->first, attackOrderIndex);
 		MetaPair unit = MetaPair(typeIt->first, unitsNeeded);
 		goal = addRequiredUnits(goal, unit, attackOrderIndex);
-		supplyNeeded += unit.first.supplyRequired() * unit.second; 
+		supplyNeeded += unit.first.supplyRequired() * (unit.second - BWAPI::Broodwar->self()->allUnitCount(unit.first.unitType)); 
 	}
 
 	supplySpace -= supplyNeeded;
@@ -213,19 +235,17 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex)
 	{ 
 		if (attackOrderIndex + 1 < armyCompositions.size())
 		{
-			StrategyPlanner::Instance().log("    getBuildOrderGoal()0");
 			return getBuildOrderGoal(attackOrderIndex + 1);
 		}
 	}
 
-	StrategyPlanner::Instance().log("    getBuildOrderGoal()1");
 	return goal;
 }
 
 /* Returns the # of the given type that are currently attacking. */
 const int StrategyPlanner::attackingUnitCount(BWAPI::UnitType type)
 {
-	StrategyPlanner::Instance().log("attackingUnitCount()");
+	StrategyPlanner::Instance().log(COMMON_LOG, "attackingUnitCount()");
 	int count = 0;
 	UnitSet::iterator it;
 	for (it = unitsAllowedToAttack.begin(); it != unitsAllowedToAttack.end(); )
@@ -243,15 +263,14 @@ const int StrategyPlanner::attackingUnitCount(BWAPI::UnitType type)
 			it++;
 		}
 	}
-	StrategyPlanner::Instance().log("    attackingUnitCount()");
 	return count;
 }
 
 /* Returns the # of the given type that are needed in order to fullfill all upcoming attack orders. */
 const int StrategyPlanner::unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, int attackOrderIndex)
 {
-	StrategyPlanner::Instance().log("unitsToBeBuiltForAttackOrder()");
-	if (attackOrderIndex == -1) { StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder0()"); return 0; }
+	StrategyPlanner::Instance().log(COMMON_LOG, "unitsToBeBuiltForAttackOrder()");
+	if (attackOrderIndex == -1) { return 0; }
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
 	MetaMap::iterator it;
@@ -259,22 +278,22 @@ const int StrategyPlanner::unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, in
 	{
 		if (it->first == type)
 		{
-			StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder1()");
 			return it->second + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
 		}
 	}
 
-	StrategyPlanner::Instance().log("    unitsToBeBuiltForAttackOrder2()");
 	return 0 + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
 }
 
 const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, MetaPair pair, int attackOrderIndex)
 {
-	StrategyPlanner::Instance().log("addRequiredUnits()");
+	StrategyPlanner::Instance().log(COMMON_LOG, "addRequiredUnits()");
+	StrategyPlanner::Instance().log(COMMON_LOG, "        " + pair.first.getName());
+
 	// if already sufficient troops, then return immediately
 	BWAPI::UnitType type = pair.first.unitType;
 	int availableUnits = BWAPI::Broodwar->self()->allUnitCount(type) - attackingUnitCount(type);
-	if (availableUnits >= pair.second) { StrategyPlanner::Instance().log("    addRequiredUnits0()"); return goal; }
+	if (availableUnits >= pair.second) { StrategyPlanner::Instance().log(COMMON_LOG, "  addRequiredUnits0()"); return goal; }
 	
 	//don't add the same unit/building twice
 	MetaPairVector::iterator iterator;
@@ -282,7 +301,7 @@ const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, Meta
 	{ 
 		if (iterator->first.getName() == pair.first.getName()) 
 		{ 
-			StrategyPlanner::Instance().log("    addRequiredUnits1()");
+			StrategyPlanner::Instance().log(COMMON_LOG, "  addRequiredUnits1()");
 			return goal; 
 		} 
 	}
@@ -294,13 +313,19 @@ const MetaPairVector StrategyPlanner::addRequiredUnits(MetaPairVector goal, Meta
 		MetaMap::iterator it;
 		for (it = requirements.begin(); it != requirements.end(); ++it)
 		{
+			//special case
+			if (it->first.isWorker()) 
+			{
+				goal.push_back((*it)); 
+				continue; 
+			}
 			goal = addRequiredUnits(goal, (*it), attackOrderIndex); 
 		}
 	}
 
 	// and lastly add the unit itself
 	goal.push_back(pair);
-	StrategyPlanner::Instance().log("    addRequiredUnits2()");
+	StrategyPlanner::Instance().log(COMMON_LOG, "  addRequiredUnits2()");
 	return goal;
 }
 

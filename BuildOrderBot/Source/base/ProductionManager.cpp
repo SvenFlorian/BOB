@@ -46,22 +46,30 @@ MetaVector ProductionManager::getQueueAsVector()
 
 void ProductionManager::performBuildOrderSearch(const std::vector< std::pair<MetaType, UnitCountType> > & goal)
 {	
-	std::vector<MetaType> buildOrder = StarcraftBuildOrderSearchManager::Instance().findBuildOrder(goal);
+	//std::vector<MetaType> buildOrder = StarcraftBuildOrderSearchManager::Instance().findBuildOrder(goal);
 
-	std::ofstream file;
-	std::string filename = "bwapi-data/BOB/data/production.txt";
-	file.open(filename.c_str(), std::ios::app);
-	file << "\nperformBuildOrderSearch: \n";
-	for (int i = 0; i < buildOrder.size(); i++)
-	{
-		MetaType type = buildOrder[i];
-		file << type.getName() << ", ";	
-	}
-	file << "\n";
-	file.close();
+	//std::ofstream file;
+	//std::string filename = "bwapi-data/BOB/data/production.txt";
+	//file.open(filename.c_str(), std::ios::app);
+	//file << "\nperformBuildOrderSearch: \n";
+	//for (int i = 0; i < buildOrder.size(); i++)
+	//{
+	//	MetaType type = buildOrder[i];
+	//	file << type.getName() << ", ";	
+	//}
+	//file << "\n";
+	//file.close();
 
-	// set the build order
-	setBuildOrder(buildOrder);
+	//// set the build order
+	//if (buildOrder.empty())
+	//{
+	//	setBuildOrder(StrategyManager::Instance().getExactBuildOrder(goal));
+	//}
+	//else
+	//{
+	//	setBuildOrder(buildOrder);
+	//}
+	setBuildOrder(StrategyManager::Instance().getExactBuildOrder(goal));
 }
 
 void ProductionManager::setSearchGoal(MetaPairVector & goal)
@@ -95,19 +103,19 @@ void ProductionManager::update()
 		BWAPI::Broodwar->drawTextScreen(150, 10, "Nothing left to build, new search!");
 		const std::vector< std::pair<MetaType, UnitCountType> > newGoal = StrategyManager::Instance().getBuildOrderGoal();
 		
-		//std::ofstream file;
-		//std::string filename = "bwapi-data/BOB/data/production.txt";
-		//file.open(filename.c_str(), std::ios::app);
-		//file << "\nsetBuildOrder: \n";
-		//for (int i = 0; i < newGoal.size(); i++)
-		//{
-		//	MetaType type = newGoal[i].first;
-		//	UnitCountType count = newGoal[i].second;
-		//	file << type.getName() << ": ";
-		//	file << (int) count << "\n";
-		//	
-		//}
-		//file.close();
+		std::ofstream file;
+		std::string filename = "bwapi-data/BOB/data/build-order.txt";
+		file.open(filename.c_str(), std::ios::app);
+		file << "\nsetBuildOrder: \n";
+		for (int i = 0; i < newGoal.size(); i++)
+		{
+			MetaType type = newGoal[i].first;
+			UnitCountType count = newGoal[i].second;
+			file << type.getName() << ": ";
+			file << (int) count << "\n";
+			
+		}
+		file.close();
 
 		//std::vector<MetaType> buildOrder = StrategyManager::Instance().getExactBuildOrder(newGoal);
 		//setBuildOrder(buildOrder);
@@ -162,6 +170,8 @@ void ProductionManager::onUnitDestroy(BWAPI::Unit * unit)
 
 			if (unit->getType() != BWAPI::UnitTypes::Zerg_Drone)
 			{
+				//const std::vector< std::pair<MetaType, UnitCountType> > newGoal = StrategyManager::Instance().getBuildOrderGoal();
+				//setBuildOrder(StrategyManager::Instance().getExactBuildOrder(newGoal);
 				performBuildOrderSearch(StrategyManager::Instance().getBuildOrderGoal());
 			}
 		}
