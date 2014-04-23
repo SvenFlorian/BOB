@@ -117,7 +117,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 	{
 		if ((*setIt)->getHitPoints() < 1)
 		{
-			unitsAllowedToAttack.erase(setIt);
+			setIt = unitsAllowedToAttack.erase(setIt);
 		} 
 		else
 		{
@@ -169,6 +169,15 @@ const bool StrategyPlanner::isAttackUnit(BWAPI::UnitType type)
 	return !(type.isBuilding() || type.isAddon() || type.isSpell() || type.isWorker());
 }
 
+const bool StrategyPlanner::isPartOfAttackingSquad(BWAPI::Unit * unit)
+{
+	UnitSet::iterator it;
+	for (it = unitsAllowedToAttack.begin(); it != unitsAllowedToAttack.end(); ++it)
+	{
+		if ((*it) == unit) { return true; }
+	}
+	return false;
+}
 
 /***************** SIMPLE GETTERS ********************/
 

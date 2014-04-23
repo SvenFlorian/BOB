@@ -73,6 +73,7 @@ public:
 	const	std::string			getOpening() const;
 	const	std::vector<int>	getUsableStrategies();
 	
+	const	bool				isPartOfAttackingSquad(BWAPI::Unit * unit);
 	const	bool				isAttackUnit(BWAPI::UnitType type);
 	const	int					attackingUnitCount(BWAPI::UnitType type);
 	const	int					unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, int attackOrderIndex);
