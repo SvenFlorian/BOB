@@ -48,9 +48,8 @@ const void StrategyPlanner::moveToNextAttackGoal()
 	{
 		attackTimings.pop_front();
 		armyCompositions.pop_front();
-		newAttackGoal = true;
 	}
-
+	newAttackGoal = true;
 }
 
 const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
@@ -78,7 +77,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 		int soldiers = 0;
 		for (unitIt = freeUnits.begin(); unitIt != freeUnits.end() && soldiers < typeIt->second; ++unitIt)
 		{
-			if (typeIt->first == (*unitIt)->getType()) 
+			if (typeIt->first == (*unitIt)->getType() && !isPartOfAttackingSquad(*unitIt)) 
 			{
 				attackSquad.insert((*unitIt));
 				soldiers++;
