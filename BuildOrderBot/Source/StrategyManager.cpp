@@ -298,11 +298,8 @@ const MetaPairVector StrategyManager::getBuildOrderGoal()
 
 const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 {
-	StrategyManager::Instance().log(COMMON_LOG, "getExactBuildOrder()");
 	MetaVector buildOrder;
 	MetaPairVector::iterator it;
-
-	StrategyManager::Instance().log("getExactBuildOrder()");
 
 	//add a worker if none are present
 	if (BWAPI::Broodwar->self()->allUnitCount(BWAPI::Broodwar->self()->getRace().getWorker()) == 0) 
@@ -319,7 +316,6 @@ const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 			while (unitsNeeded-- > 0)
 			{
 				buildOrder.push_back(it->first);
-				StrategyManager::Instance().log("  " + it->first.getName());
 			}
 			it = goal.erase(it);
 		} else
@@ -335,11 +331,8 @@ const MetaVector StrategyManager::getExactBuildOrder(MetaPairVector goal)
 		while (unitsNeeded-- > 0)
 		{
 			buildOrder.push_back(it->first);
-			StrategyManager::Instance().log("    " + it->first.getName());
 		}
 	}
-
-	StrategyManager::Instance().log("");
 
 	return buildOrder;
 }
