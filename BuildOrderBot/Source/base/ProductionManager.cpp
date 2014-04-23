@@ -144,6 +144,15 @@ void ProductionManager::update()
 			queue.queueAsHighestPriority(MetaType(BWAPI::UnitTypes::Protoss_Forge), true);
 		}
 
+		if (BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Protoss_Probe) == 0)
+		{
+			queue.queueAsHighestPriority(MetaType(BWAPI::UnitTypes::Protoss_Probe), true);
+		}
+		else if (BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Protoss_Nexus) == 0)
+		{
+			queue.queueAsHighestPriority(MetaType(BWAPI::UnitTypes::Protoss_Nexus), true);
+		}
+
 		BWAPI::Broodwar->printf("Enemy Cloaked Unit Detected!");
 		enemyCloakedDetected = true;
 	}

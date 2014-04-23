@@ -86,6 +86,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 	// if the time is not right, then don't add more attacking units
 	if (BWAPI::Broodwar->getFrameCount() < attackTimings.front())
 	{
+		StrategyPlanner::Instance().log(COMMON_LOG, "     getAttackSquad0()");
 		return unitsAllowedToAttack;
 	}
 
@@ -109,7 +110,7 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 		}
 
 		// if not enough troops, only return currently attacking squad
-		if (soldiers < typeIt->second) { return unitsAllowedToAttack; }
+		if (soldiers < typeIt->second) { StrategyPlanner::Instance().log(COMMON_LOG, "     getAttackSquad1()");return unitsAllowedToAttack; }
 	}
 
 	UnitSet::iterator setIt;
@@ -128,12 +129,16 @@ const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const U
 
 	unitsAllowedToAttack.insert(attackSquad.begin(), attackSquad.end());
 	StrategyPlanner::moveToNextAttackGoal();
+	StrategyPlanner::Instance().log(COMMON_LOG, "     getAttackSquad2()");
 	return unitsAllowedToAttack;
 }
 
 const MetaMap StrategyPlanner::getArmyComposition()
 {
-	return currentWantedArmyComposition = getArmyComposition(armyCompositions.front());
+	if (!newAttackGoal) { return currentWantedArmyComposition; }
+	
+	newAttackGoal = false;
+	return currentWantedArmyComposition = getArmyComposition(armyCompositions.front());;
 }
 
 /* Extracts information from two strings. 
@@ -144,7 +149,6 @@ const MetaMap StrategyPlanner::getArmyComposition()
 const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 {
 	StrategyPlanner::Instance().log(COMMON_LOG, "getArmyComposition()");
-	if (!newAttackGoal) { return currentWantedArmyComposition; }
 
 	MetaMap unitMap;
 	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(armyComposition.first);
@@ -161,6 +165,7 @@ const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 		it++;
 	}
 
+	StrategyPlanner::Instance().log(COMMON_LOG, "   getArmyComposition()");
 	return unitMap;
 }
 
@@ -279,7 +284,7 @@ const int StrategyPlanner::attackingUnitCount(BWAPI::UnitType type)
 const int StrategyPlanner::unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, int attackOrderIndex)
 {
 	StrategyPlanner::Instance().log(COMMON_LOG, "unitsToBeBuiltForAttackOrder()");
-	if (attackOrderIndex == -1) { return 0; }
+	if (attackOrderIndex == -1) { StrategyPlanner::Instance().log(COMMON_LOG, "  unitsToBeBuiltForAttackOrder0()"); return 0; }
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
 	MetaMap::iterator it;
@@ -287,10 +292,12 @@ const int StrategyPlanner::unitsToBeBuiltForAttackOrder(BWAPI::UnitType type, in
 	{
 		if (it->first == type)
 		{
+			StrategyPlanner::Instance().log(COMMON_LOG, "  unitsToBeBuiltForAttackOrder1()");
 			return it->second + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
 		}
 	}
 
+	StrategyPlanner::Instance().log(COMMON_LOG, "  unitsToBeBuiltForAttackOrder2()");
 	return 0 + unitsToBeBuiltForAttackOrder(type, attackOrderIndex - 1);
 }
 

@@ -302,7 +302,7 @@ BWAPI::TilePosition MapTools::getNextExpansion()
 	BOOST_FOREACH(BWTA::BaseLocation * base, BWTA::getBaseLocations())
 	{
 		// if the base has gas
-		if(!base->isMineralOnly() && !(base == BWTA::getStartLocation(BWAPI::Broodwar->self())))
+		if(!(base == BWTA::getStartLocation(BWAPI::Broodwar->self())))
 		{
 			// get the tile position of the base
 			BWAPI::TilePosition tile = base->getTilePosition();
