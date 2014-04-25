@@ -133,6 +133,7 @@ void ProductionManager::update()
 	// if they have cloaked units get a new goal asap
 	if (!enemyCloakedDetected && InformationManager::Instance().enemyHasCloakedUnits())
 	{
+		if (BWAPI::Broodwar->self()->getRace() != BWAPI::Races::Protoss) { return; }
 		if (BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Protoss_Photon_Cannon) < 2)
 		{
 			queue.queueAsHighestPriority(MetaType(BWAPI::UnitTypes::Protoss_Photon_Cannon), true);

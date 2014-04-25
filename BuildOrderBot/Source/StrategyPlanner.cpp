@@ -44,21 +44,29 @@ void StrategyPlanner::setStrategy()
 
 const void StrategyPlanner::moveToNextAttackGoal()
 {
-	if (attackTimings.size() > 1)
-	{
-		attackTimings.pop_front();
-		armyCompositions.pop_front();
-	}
+	attackTimings.pop_front();
+	armyCompositions.pop_front();
 	newAttackGoal = true;
 }
 
 const UnitSet StrategyPlanner::getAttackSquad(const UnitSet freeUnits)
 {
+	if (attackTimings.empty())
+	{
+		unitsAllowedToAttack.insert(freeUnits.begin(), freeUnits.end());
+		return unitsAllowedToAttack;
+	}
 	return getAttackSquad(getArmyComposition(), freeUnits);
 }
 
 const UnitSet StrategyPlanner::getAttackSquad(const MetaMap wantedSquad, const UnitSet freeUnits)
 {
+	if (attackTimings.empty())
+	{
+		unitsAllowedToAttack.insert(freeUnits.begin(), freeUnits.end());
+		return unitsAllowedToAttack;
+	}
+
 	// if the time is not right, then don't add more attacking units
 	if (BWAPI::Broodwar->getFrameCount() < attackTimings.front())
 	{
@@ -123,6 +131,11 @@ const MetaMap StrategyPlanner::getArmyComposition()
 const MetaMap StrategyPlanner::getArmyComposition(StringPair armyComposition)
 {
 	MetaMap unitMap;
+	if (armyComposition.first.empty())
+	{
+		return unitMap;
+	}
+
 	std::vector<MetaType> units = StarcraftBuildOrderSearchManager::Instance().getMetaVector(armyComposition.first);
 
 	std::vector<MetaType>::iterator it = units.begin();
@@ -185,6 +198,10 @@ const MetaPairVector StrategyPlanner::getBuildOrderGoal()
 const MetaPairVector StrategyPlanner::getBuildOrderGoal(int attackOrderIndex)
 {
 	MetaPairVector goal;
+	if (attackOrderIndex <= armyCompositions.size())
+	{
+		return goal;
+	}
 
 	MetaMap desiredArmy = StrategyPlanner::getArmyComposition(armyCompositions[attackOrderIndex]);
 	MetaMap::iterator typeIt;
